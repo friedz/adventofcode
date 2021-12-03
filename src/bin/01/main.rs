@@ -6,7 +6,6 @@ use std::{
 use csv::ReaderBuilder;
 use std::fs::File;
 
-
 fn main() -> Result<(), Box<dyn Error>> {
     let input: Vec<i32> =  ReaderBuilder::new()
         .has_headers(false)
@@ -24,7 +23,18 @@ fn main() -> Result<(), Box<dyn Error>> {
                 0
             }
         });
-    println!("{:?}", res);
+    println!("{}", res);
+
+    let res = input[..input.len()].windows(3)
+        .zip(input[1..].windows(3))
+        .fold(0, |acc, (a, b)| {
+            acc + if a.iter().sum::<i32>() < b.iter().sum::<i32>() {
+                1
+            } else {
+                0
+            }
+        });
+    println!("{}", res);
 
     Ok(())
 }
