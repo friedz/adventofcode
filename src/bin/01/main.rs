@@ -1,12 +1,12 @@
 
 use std::{
-    error::Error,
     iter::Iterator,
+    io::Error,
 };
 use csv::ReaderBuilder;
 use std::fs::File;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     let input: Vec<i32> =  ReaderBuilder::new()
         .has_headers(false)
         .from_reader(File::open("src/bin/01/input.txt")?)
