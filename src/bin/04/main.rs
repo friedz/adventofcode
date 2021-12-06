@@ -63,7 +63,9 @@ impl Deref for Marked {
 
 const SIZE: usize = 5;
 
+#[derive(Debug, Clone, Copy)]
 struct Board {
+    finished: bool,
     last: u32,
     field: [Marked; SIZE * SIZE],
 }
@@ -100,6 +102,7 @@ enum Check {
 impl Board {
     fn empty() -> Board {
         Board {
+            finished: false,
             last: 0,
             field: [Marked::Unmarked(0); SIZE * SIZE],
         }
@@ -118,7 +121,13 @@ impl Board {
     fn result(&self) -> u32 {
         self.score() * self.last()
     }
+    fn done(&self) -> bool {
+        self.finished
+    }
     fn won(&self, (x, y): (usize, usize)) -> bool {
+        if self.finished {
+            return true;
+        }
         let (mut row, mut col) = (true, true);
         for i in 0..SIZE {
             col = match (self.field[Self::idx((i, y))], col) {
@@ -144,17 +153,15 @@ impl Board {
         y*SIZE + x
     }
     fn check_number(&mut self, next: u32) -> Check {
-        //println!("-> {}", next);
         for i in 0..SIZE * SIZE {
             let entry = self.field[i];
             if entry == next {
                 self.field[i] = entry.mark();
                 self.last = next;
                 if self.won(Self::pos_from_idx(i)) {
+                    self.finished = true;
                     return Check::Won;
                 } else {
-                    //println!("{}", self.last);
-                    //println!("{}", self);
                     return Check::Checked;
                 }
             }
@@ -181,25 +188,44 @@ fn parse_input(s: &str) -> Result<(Vec<u32>, Vec<Board>), ParseIntError> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    //let (input, mut boards) = parse_input(&TEST_INPUT)?;
     let (input, mut boards) = parse_input(&include_str!("input.txt"))?;
 
-    'outer: for n in input {
-        //for (idx, mut board) in boards.iter().enumerate() {
+    let mut solutions = [None, None];
+    for n in input {
         for idx in 0..boards.len() {
+            if boards[idx].done() {
+                continue;
+            }
             //let board = boards[idx];
             //println!("{}\n", boards[idx]);
             match boards[idx].check_number(n) {
                 Check::Won => {
-                    println!("the winning board is:");
-                    println!("{}", boards[idx]);
-                    println!("score: {}, last: {} => {}", boards[idx].score(), boards[idx].last(), boards[idx].result());
-                    break 'outer;
+                    match solutions[0] {
+                        None => solutions[0] = Some(boards[idx]),
+                        _ => {},
+                    }
+                    solutions[1] = Some(boards[idx]);
                 },
                 _ => continue,
             }
         }
     }
-
+    match &solutions[0] {
+        Some(first) => {
+            println!("the winning board is:");
+            println!("{}", first);
+            println!("score: {}, last: {} => {}", first.score(), first.last(), first.result());
+        },
+        None => {},
+    }
+    println!("");
+    match &solutions[1] {
+       Some(last) => {
+            println!("the last board is:");
+            println!("{}", last);
+            println!("score: {}, last: {} => {}", last.score(), last.last(), last.result());
+        },
+        None => {},
+    }
     Ok(())
 }
