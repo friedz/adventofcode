@@ -45,6 +45,12 @@ impl Point {
     fn set_not_low(&mut self) {
         self.lowest = Some(false);
     }
+    fn set_basin(&mut self, bid) {
+        self.basin = Some(bid);
+    }
+    fn reset_basin(&mut self) {
+        self.basin = None;
+    }
     fn risk(&self) -> u32 {
         if Some(true) == self.lowest {
             1 + self.depth as u32
@@ -121,6 +127,44 @@ impl HeightMap {
             }
         }
         self
+    }
+    fn neighbors(&self, x: usize, y: usize) -> Vec<Point> {
+        let mut res = Vec::new();
+        if x > 0 {
+            res.push(self[(x - 1, y)]);
+        }
+        if y > 0 {
+            res.push(self[(x, y - 1)]);
+        }
+        if x < self.width - 1 {
+            res.push(self[(x + 1, y)]);
+        }
+        if y < self.height - 1 {
+            res.push(self[(x, y + 1)]);
+        }
+        res
+    }
+    fn check_basins(&mut self) -> &mut Self {
+        let mut bid = 0;
+        loop {
+            let mut changed = false;
+            for y in 0..self.height {
+                for x in 0..self.width {
+                    if self[(x, y)].depth() < 9 {
+                        let neigh = self.neighbors(x, y).filter(|x| x.depth() < 9).collect();
+                        if 0 == neigh.len() {
+                            bid += 1;
+                            self[(x, y)].set_basin(bid);
+                            changed = true;
+                            continue;
+                        } else 
+                    }
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
     }
     fn risk_level(&self) -> Result<u32, SimpleError> {
         self.map.clone().into_iter().try_fold(0, |risk, p| {
