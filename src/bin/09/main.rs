@@ -21,62 +21,42 @@ const TEST_INPUT: &str = "2199943210
 8767896789
 9899965678";
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-enum Point {
-    Low(u8),
-    NotLow(u8),
-    NotChecked(u8),
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
+struct Point {
+    depth: u8,
+    lowest: Option<bool>,
+    basin: Option<usize>,
 }
 
 impl Point {
     fn from_char(c: &char) -> Result<Point, SimpleError> {
         match c.to_digit(10) {
-            Some(d) => Ok(Point::NotChecked(d as u8)),
+            Some(d) => Ok(Point {
+                depth: d as u8,
+                lowest: None,
+                basin: None,
+            }),
             None => Err(SimpleError::new(format!("{} is not a number!", c))),
         }
     }
-}
-
-impl PartialOrd for Point {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(if **self < **other {
-            Ordering::Less
-        } else if **self > **other {
-            Ordering::Greater
-        } else if self == other {
-            Ordering::Equal
-        } else {
-            return None
-        })
-    }
-}
-
-impl Deref for Point {
-    type Target = u8;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Point::Low(d) => &d,
-            Point::NotLow(d) => &d,
-            Point::NotChecked(d) => &d,
-        }
-    }
-}
-
-impl Point {
     fn set_low(&mut self) {
-        match self {
-            Point::NotChecked(d) => *self = Point::Low(*d),
-            Point::NotLow(d) => *self = Point::Low(*d),
-            _ => {},
-        }
+        self.lowest = Some(true);
     }
     fn set_not_low(&mut self) {
-        match self {
-            Point::NotChecked(d) => *self = Point::NotLow(*d),
-            Point::Low(d) => *self = Point::NotLow(*d),
-            _ => {},
+        self.lowest = Some(false);
+    }
+    fn risk(&self) -> u32 {
+        if Some(true) == self.lowest {
+            1 + self.depth as u32
+        } else {
+            0
         }
+    }
+    fn is_lowest(&self) -> Option<bool> {
+        self.lowest
+    }
+    fn depth(&self) -> u8 {
+        self.depth
     }
 }
 
@@ -93,7 +73,6 @@ impl FromStr for HeightMap{
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (map, (width, _), height) = s.chars().try_fold((Vec::new(), (0, 0), 0), |(map, (line_len, line_count), height), c| {
-            //if c.is_whitespace() {
             if '\n' == c {
                 if line_len != 0 && line_len != line_count {
                     return Err(SimpleError::new("line lenght not consitent"));
@@ -145,18 +124,15 @@ impl HeightMap {
     }
     fn risk_level(&self) -> Result<u32, SimpleError> {
         self.map.clone().into_iter().try_fold(0, |risk, p| {
-            Ok(risk + match p {
-                Point::Low(d) => 1 + d as u32,
-                Point::NotLow(_) => 0 as u32,
-                Point::NotChecked(_) => return Err(SimpleError::new("Heights not jet evaluated")),
-            })
+            Ok(risk + p.risk())
         })
     }
     fn ansi_print(&self) {
         for (i, p) in self.map.clone().into_iter().enumerate() {
-            match p {
-                Point::Low(v) => print!("\x1b[30;47;1m{}\x1b[0m", v),
-                Point::NotLow(v) | Point::NotChecked(v) => print!("{}", v),
+            if  Some(true) == p.is_lowest() {
+                print!("\x1b[30;47;1m{}\x1b[0m", p.depth());
+            } else {
+                print!("{}", p.depth());
             }
             if (i + 1) % self.width == 0 {
                 println!("");
@@ -167,8 +143,8 @@ impl HeightMap {
 
 
 fn main() -> Result<(), Box<dyn Error>> {
-    //let input = TEST_INPUT;
-    let input = include_str!("input.txt");
+    let input = TEST_INPUT;
+    //let input = include_str!("input.txt");
     let mut map = HeightMap::from_str(input)?;
     map.check_low_points();
     //map.ansi_print();
