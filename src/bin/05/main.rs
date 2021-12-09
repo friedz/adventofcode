@@ -1,4 +1,6 @@
 
+#![feature(int_abs_diff)]
+
 use std::{
     collections::HashMap,
     cmp::{
@@ -84,10 +86,41 @@ impl LineSegment {
             (min(self.start.y, self.end.y)..=max(self.start.y, self.end.y))
                 .map(|y| Point::new(self.start.x, y)).collect()
         } else {
-            // for now we ignore this case
-            Vec::new()
+            let x_step = if self.start.x < self.end.x {
+                |x| x + 1
+            } else {
+                |x| x - 1
+            };
+            let y_step = if self.start.y < self.end.y {
+                |y| y + 1
+            } else {
+                |y| y - 1
+            };
+            let (mut res, _) = (0..self.start.x.abs_diff(self.end.x)).into_iter()
+                .fold((Vec::new(), (self.start.x, self.start.y)), |(acc, (x, y)), _| {
+                let mut acc = acc;
+                acc.push(Point::new(x, y));
+                (acc, (x_step(x), y_step(y)))
+            });
+            res.push(Point::new(self.end.x, self.end.y));
+            res
         }
     }
+}
+
+fn build_map(map: HashMap<Point, usize>, line: &LineSegment) -> HashMap<Point, usize> {
+    let mut map = map;
+    for p in line.points() {
+        match map.get_mut(&p) {
+            Some(v) => {
+                *v += 1;
+            },
+            None => {
+                map.insert(p, 1);
+            },
+        }
+    }
+    map
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -100,21 +133,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             Ok(arr)
         })?;
     let cross_points = arr.iter().filter(|l| l.horizontal_or_vertical())
-        .fold(HashMap::new(), |map, line| {
-            let mut map = map;
-            for p in line.points() {
-                match map.get_mut(&p) {
-                    Some(v) => {
-                        *v += 1;
-                    },
-                    None => {
-                        map.insert(p, 1);
-                    },
-                }
-            }
-            map
-        });
-    println!("{}", cross_points.len());
+        .fold(HashMap::new(), |map, line| build_map(map, line));
+
     let num = cross_points.iter().fold(0, |sum, (_, v)| {
         if *v > 1 {
             sum + 1
@@ -122,8 +142,18 @@ fn main() -> Result<(), Box<dyn Error>> {
             sum
         }
     });
-    //println!("{:?}", arr);
-    //println!("{:?}", cross_points);
+    println!("{}", num);
+
+    let cross_points = arr.iter()//.filter(|l| l.horizontal_or_vertical())
+        .fold(HashMap::new(), |map, line| build_map(map, line));
+
+    let num = cross_points.iter().fold(0, |sum, (_, v)| {
+        if *v > 1 {
+            sum + 1
+        } else {
+            sum
+        }
+    });
     println!("{}", num);
 
     Ok(())
