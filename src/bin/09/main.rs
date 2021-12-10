@@ -1,14 +1,9 @@
 
 use std::{
     collections::HashMap,
-    cmp::{
-        max,
-        min,
-        Ordering,
-    },
+    cmp::min,
     error::Error,
     ops::{
-        Deref,
         Index,
         IndexMut,
     },
@@ -58,9 +53,6 @@ impl Point {
     }
     fn basin(&self) -> Option<usize> {
         self.basin
-    }
-    fn reset_basin(&mut self) {
-        self.basin = None;
     }
     fn risk(&self) -> u32 {
         if Some(true) == self.lowest {
@@ -176,7 +168,6 @@ impl HeightMap {
                                 }
                             }
                         });
-                        let foo: Vec<Option<usize>> = self.neighbors(x, y).into_iter().map(|x| x.basin()).collect();
                         let update = self[(x,y)].set_basin(match basin_id {
                             Some(id) => {
                                 id
@@ -195,7 +186,6 @@ impl HeightMap {
             if !changed {
                 break;
             }
-            changed = false;
         }
         self
     }
