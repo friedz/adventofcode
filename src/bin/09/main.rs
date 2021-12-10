@@ -1,8 +1,10 @@
 
 use std::{
+    collections::HashMap,
     cmp::{
+        max,
+        min,
         Ordering,
-        PartialOrd,
     },
     error::Error,
     ops::{
@@ -45,8 +47,17 @@ impl Point {
     fn set_not_low(&mut self) {
         self.lowest = Some(false);
     }
-    fn set_basin(&mut self, bid) {
-        self.basin = Some(bid);
+    fn set_basin(&mut self, bid: usize) -> bool {
+        if self.basin != Some(bid) {
+            //println!("{:?} {}", self.basin, bid);
+            self.basin = Some(bid);
+            true
+        } else {
+            false
+        }
+    }
+    fn basin(&self) -> Option<usize> {
+        self.basin
     }
     fn reset_basin(&mut self) {
         self.basin = None;
@@ -74,7 +85,7 @@ struct HeightMap {
     map: Vec<Point>,
 }
 
-impl FromStr for HeightMap{
+impl FromStr for HeightMap {
     type Err = SimpleError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -144,27 +155,77 @@ impl HeightMap {
         }
         res
     }
-    fn check_basins(&mut self) -> &mut Self {
+    fn find_basins(&mut self) -> &mut Self {
         let mut bid = 0;
         loop {
             let mut changed = false;
             for y in 0..self.height {
                 for x in 0..self.width {
                     if self[(x, y)].depth() < 9 {
-                        let neigh = self.neighbors(x, y).filter(|x| x.depth() < 9).collect();
-                        if 0 == neigh.len() {
-                            bid += 1;
-                            self[(x, y)].set_basin(bid);
+                        let basin_id = self.neighbors(x, y).into_iter()
+                            .fold(self[(x, y)].basin(), |min_basin, p| {
+                            match p.basin() {
+                                None => min_basin,
+                                Some(basin_id) => {
+                                    match min_basin {
+                                        None => Some(basin_id),
+                                        Some(id) => {
+                                            Some(min(id, basin_id))
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        let foo: Vec<Option<usize>> = self.neighbors(x, y).into_iter().map(|x| x.basin()).collect();
+                        let update = self[(x,y)].set_basin(match basin_id {
+                            Some(id) => {
+                                id
+                            }
+                            None => {
+                                bid += 1;
+                                bid
+                            }
+                        });
+                        if update {
                             changed = true;
-                            continue;
-                        } else 
+                        }
                     }
                 }
             }
             if !changed {
                 break;
             }
+            changed = false;
         }
+        self
+    }
+    fn basin_score(&self) -> usize {
+        let mut res = HashMap::new();
+        for p in &self.map {
+            match p.basin() {
+                None => {}
+                Some(id) => {
+                    match res.get_mut(&id) {
+                        None => { res.insert(id, 1); }
+                        Some(n) => {
+                            *n += 1;
+                        }
+                    }
+                }
+            }
+        }
+        let (a, b, c) = res.into_values().fold((0, 0, 0), |(a, b, c), x| {
+            if x > a && x > b && x > c {
+                (b, c, x)
+            } else if x > a && x > b {
+                (b, x, c)
+            } else if x > a {
+                (x, b, c)
+            } else {
+                (a, b, c)
+            }
+        });
+        a * b * c
     }
     fn risk_level(&self) -> Result<u32, SimpleError> {
         self.map.clone().into_iter().try_fold(0, |risk, p| {
@@ -187,13 +248,24 @@ impl HeightMap {
 
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let input = TEST_INPUT;
-    //let input = include_str!("input.txt");
+    //let input = TEST_INPUT;
+    let input = include_str!("input.txt");
     let mut map = HeightMap::from_str(input)?;
     map.check_low_points();
+    map.find_basins();
+
     //map.ansi_print();
+    //for y in 0..map.height {
+    //    for x in 0..map.width {
+    //        print!("{:<7} ", format!("{:?}", map[(x, y)].basin()));
+    //    }
+    //    println!("");
+    //}
+
     let risk = map.risk_level()?;
+    let basin = map.basin_score();
     println!("{}", risk);
+    println!("{}", basin);
 
     Ok(())
 }
