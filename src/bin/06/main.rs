@@ -4,10 +4,6 @@ use std::{
     str::FromStr,
 };
 
-use csv::{
-    ReaderBuilder,
-    Terminator,
-};
 use simple_error::SimpleError;
 
 const TEST_INPUT: &str = "3,4,3,1,2";
