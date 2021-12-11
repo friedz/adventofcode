@@ -75,6 +75,15 @@ impl Token {
             _ => 0,
         }
     }
+    fn complete_score(&self) -> Option<usize> {
+        Some(match self {
+            Token::RoundOpen => 1,
+            Token::SquareOpen => 2,
+            Token::CurlyOpen => 3,
+            Token::PointyOpen => 4,
+            _ => return None,
+        })
+    }
 }
 
 impl Display for Token {
@@ -92,30 +101,59 @@ impl Display for Token {
     }
 }
 
-fn evaluate_line(s: &str) -> SimpleResult<usize> {
+enum ErrorComplete {
+    Error(usize),
+    Complete(usize),
+}
+
+fn evaluate_line(s: &str) -> SimpleResult<ErrorComplete> {
     let mut stack = Vec::new();
+    //let mut error = 0;
     for c in s.chars() {
         let token = Token::from_char(&c)?;
         if token.open() {
             stack.push(token);
         } else {
             match stack.pop() {
-                Some(open) if !open.closing(&token) => return Ok(token.error_score()),
-                None => return Ok(token.error_score()),
-                Some(_) => {},
+                Some(open) if !open.closing(&token) => {
+                    return Ok(ErrorComplete::Error(token.error_score()));
+                },
+                None => {
+                    return Ok(ErrorComplete::Error(token.error_score()));
+                },
+                _ => {},
             }
         }
     }
-    Ok(0)
+    let complete = stack.into_iter().rev().fold(0, |complete, c| {
+        match c.complete_score() {
+            Some(score) => complete * 5 + score,
+            None => complete,
+        }
+    });
+    Ok(ErrorComplete::Complete(complete))
 }
 
 fn main() -> SimpleResult<()> {
     //let input = TEST_INPUT;
     let input = include_str!("input.txt");
-    let score = input.split('\n').try_fold(0, |error_score, line| -> SimpleResult<usize> {
-        Ok(error_score + evaluate_line(line)?)
+    let (error, complete) = input.split('\n')
+        .try_fold((0, Vec::new()), |(error_score, complete_score), line| -> SimpleResult<(usize, Vec<usize>)> {
+        match evaluate_line(line)? {
+            ErrorComplete::Error(err) => {
+                Ok((error_score + err, complete_score))
+            },
+            ErrorComplete::Complete(comp) => {
+                let mut complete_score = complete_score;
+                complete_score.push(comp);
+                Ok((error_score, complete_score))
+            },
+        }
     })?;
-    println!("{:?}", score);
+    let mut complete: Vec<usize> = complete.into_iter().filter(|x| *x != 0).collect();
+    complete.sort();
+    println!("{}", error);
+    println!("{}", complete[complete.len()/2]);
 
     Ok(())
 }
