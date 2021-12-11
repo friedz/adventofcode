@@ -4,7 +4,6 @@ use std::fmt::{
     Display,
 };
 use simple_error::{
-    //SimpleError,
     SimpleResult,
     simple_error,
 };
