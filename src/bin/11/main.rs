@@ -27,7 +27,7 @@ const TEST_INPUT: &str = "5483143223
 5283751526
 ";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Grid {
     height: usize,
     width: usize,
@@ -54,6 +54,8 @@ impl Grid {
                                 Some(xi) if xi < self.width => xi,
                                 _ => continue,
                             };
+                            // 10 -> it will flash
+                            // 11 -> it has given energie to its neighbors
                             if 10 == self[(x, y)] && 9 >= self[(xi, yi)] {
                                 self[(xi, yi)] += 1;
                                 changed = true;
@@ -83,6 +85,24 @@ impl Grid {
         (1..=n).fold(0, |flashes, _| {
             flashes + self.step()
         })
+    }
+    fn is_all_flash(&self) -> bool {
+        for o in &self.grid {
+            if 0 != *o {
+                return false;
+            }
+        }
+        true
+    }
+    fn all_flash(&mut self) -> usize {
+        let mut step = 0;
+        loop {
+            self.step();
+            step += 1;
+            if self.is_all_flash() {
+                return step;
+            }
+        }
     }
     fn ansi_print(&self) {
         for y in 0..self.height {
@@ -146,8 +166,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = include_str!("input.txt");
     let mut g = Grid::from_str(input)?;
 
-    let flashes = g.steps(100);
+    let flashes = g.clone().steps(100);
+    let steps_to_all_flash = g.clone().all_flash();
     println!("{}", flashes);
+    println!("{}", steps_to_all_flash);
 
     Ok(())
 }
