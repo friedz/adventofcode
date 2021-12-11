@@ -9,6 +9,10 @@ use std::{
 
 const TEST_INPUT: &str = "16,1,2,0,4,2,7,1,2,14";
 
+fn cost(n: usize) -> usize {
+    (n*n + n) / 2
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     //let input = TEST_INPUT;
     let input = include_str!("input.txt");
@@ -20,8 +24,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     data.sort();
     let mead = data[data.len()/2];
-    let res = data.into_iter().fold(0, |cost, i| {
-        cost + mead.abs_diff(i)
+    let res = data.iter().fold(0, |cost, i| {
+        cost + mead.abs_diff(*i)
+    });
+    println!("{}", res);
+
+    let av = data.iter().fold(0, |sum, i| sum + *i)/(data.len());
+    let res = data.iter().fold(0, |fuel, i| {
+        fuel + cost(av.abs_diff(*i))
     });
     println!("{}", res);
 
