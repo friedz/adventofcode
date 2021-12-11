@@ -164,7 +164,7 @@ impl FromStr for Grid {
 fn main() -> Result<(), Box<dyn Error>> {
     //let input = TEST_INPUT;
     let input = include_str!("input.txt");
-    let mut g = Grid::from_str(input)?;
+    let g = Grid::from_str(input)?;
 
     let flashes = g.clone().steps(100);
     let steps_to_all_flash = g.clone().all_flash();
