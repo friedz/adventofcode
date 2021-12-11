@@ -2,7 +2,6 @@
 #![feature(mixed_integer_ops)]
 
 use std::{
-    cmp::max,
     error::Error,
     fmt::Debug,
     ops::{
@@ -10,13 +9,10 @@ use std::{
         IndexMut,
     },
     str::FromStr,
-    thread::sleep,
-    time::Duration,
 };
 use simple_error::{
     SimpleError,
     simple_error,
-    SimpleResult,
 };
 
 const TEST_INPUT: &str = "5483143223
@@ -43,8 +39,6 @@ impl Grid {
         for o in &mut self.grid {
             *o += 1;
         }
-        //self.ansi_print();
-        //println!("");
         loop {
             let mut changed = false;
             for y in 0..self.height {
@@ -72,8 +66,6 @@ impl Grid {
                     }
                 }
             }
-            //self.ansi_print();
-            //println!("");
             if !changed {
                 break;
             }
@@ -88,11 +80,9 @@ impl Grid {
         flashes
     }
     fn steps(&mut self, n: usize) -> usize {
-        let mut flashes = 0;
-        for i in 1..=n {
-            flashes += self.step();
-        }
-        flashes
+        (1..=n).fold(0, |flashes, _| {
+            flashes + self.step()
+        })
     }
     fn ansi_print(&self) {
         for y in 0..self.height {
