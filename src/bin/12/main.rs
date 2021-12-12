@@ -41,8 +41,8 @@ impl FromStr for Cave {
 impl Cave {
     fn is_small(&self) -> bool {
         match self {
-            Cave::Small(_) => true,
-            _ => false,
+            Cave::Big(_) => false,
+            _ => true,
         }
     }
 }
@@ -116,6 +116,32 @@ impl CaveSystem {
 
         paths
     }
+    fn find_paths_small_once_double(&self) -> Vec<Vec<Cave>> {
+        let mut paths = Vec::new();
+        let mut stack = vec![(false, vec![Cave::Start])];
+        while let Some((double, path)) = stack.pop() {
+            'neighbors: for n in self.neighbors(&path[path.len() - 1]) {
+                let mut double = double;
+                for i in (&path).into_iter().filter(|c| c.is_small()) {
+                    if i == n {
+                        if double {
+                            continue 'neighbors;
+                        } else {
+                            double = true;
+                        }
+                    }
+                }
+                let mut p = path.clone();
+                p.push(n.clone());
+                match *n {
+                    Cave::End => paths.push(p),
+                    _ => stack.push((double, p)),
+                }
+            }
+        }
+
+        paths
+    }
 }
 
 
@@ -126,10 +152,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let caves = CaveSystem::from_str(input)?;
     let paths = caves.find_paths();
+    let double_paths = caves.find_paths_small_once_double();
     //for path in &paths {
     //    println!("{:?}", path);
     //}
     println!("{}", paths.len());
+    println!("{}", double_paths.len());
 
     Ok(())
 }
