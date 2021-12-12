@@ -46,9 +46,9 @@ impl FromStr for MangledWires {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(s.chars()
             .try_fold(MangledWires(HashSet::new()), |mut line, c| -> SimpleResult<MangledWires> {
-            line.0.insert(Symbol::from_char(&c)?);
-            Ok(line)
-        })?)
+                line.0.insert(Symbol::from_char(&c)?);
+                Ok(line)
+            })?)
     }
 }
 impl MangledWires {
@@ -81,28 +81,28 @@ impl FromStr for LookupBuilder {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         s.split_whitespace()
             .try_fold(LookupBuilder::default(), |mut builder, digit| -> SimpleResult<LookupBuilder> {
-            let mw = MangledWires::from_str(digit.trim())?.as_set();
-            match mw.len() {
-                2 => builder.two.push(mw),
-                3 => builder.three.push(mw),
-                4 => builder.four.push(mw),
-                5 => builder.five.push(mw),
-                6 => builder.six.push(mw),
-                7 => {},
-                _ => return Err(simple_error!("{:?} is not a posible 7 segment digit", mw)),
-            }
-            Ok(builder)
-        })
+                let mw = MangledWires::from_str(digit.trim())?.as_set();
+                match mw.len() {
+                    2 => builder.two.push(mw),
+                    3 => builder.three.push(mw),
+                    4 => builder.four.push(mw),
+                    5 => builder.five.push(mw),
+                    6 => builder.six.push(mw),
+                    7 => {},
+                    _ => return Err(simple_error!("{:?} is not a posible 7 segment digit", mw)),
+                }
+                Ok(builder)
+            })
     }
 }
 fn count_sets_with_symbol(v: &Vec<HashSet<Symbol>>, s: &Symbol) -> usize {
-        v.into_iter().fold(0, |sum, digit| {
-            if digit.contains(s) {
-                sum + 1
-            } else {
-                sum
-            }
-        })
+    v.into_iter().fold(0, |sum, digit| {
+        if digit.contains(s) {
+            sum + 1
+        } else {
+            sum
+        }
+    })
 }
 impl LookupBuilder {
     fn symbol_filter(&self, s: &Symbol) -> SimpleResult<Symbol> {
@@ -194,10 +194,13 @@ fn main() -> SimpleResult<()> {
     let (part1, part2) = input.lines().filter(|x| 0 != x.len())
         .try_fold((0,0), |(p1, p2), line| -> SimpleResult<(usize, usize)> {
             let mut line = line.split("|");
-            let def = line.next().ok_or(simple_error!("malformed line"))?;
-            let digit_builder = LookupBuilder::from_str(def)?.digit_builder()?;
-            let line = line.next().ok_or(simple_error!("malformed line"))?;
-            let (p1, pl2) = line.split(" ").map(|x| x.trim()).filter(|x| 0 != x.len())
+            let digit_builder = LookupBuilder::from_str(
+                line.next().ok_or(simple_error!("malformed line"))?
+            )?.digit_builder()?;
+            let (p1, pl2) = line.next().ok_or(simple_error!("malformed line"))?
+                .split(" ")
+                .map(|x| x.trim())
+                .filter(|x| 0 != x.len())
                 .try_fold((p1, 0), |(p1, p2), d| -> SimpleResult<(usize, usize)> {
                     let d = digit_builder.from_str(d)?.as_u8()?;
                     let p1 = match d {
