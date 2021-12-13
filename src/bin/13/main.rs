@@ -5,6 +5,10 @@ use std::{
         min,
     },
     collections::HashSet,
+    fmt::{
+        self,
+        Display,
+    },
     str::FromStr,
 };
 use simple_error::{
@@ -43,6 +47,14 @@ impl FromStr for FoldLine {
             "y" => FoldLine::Y(coord),
             e => return Err(simple_error!("{} is not a valid dimension to fold!", e)),
         })
+    }
+}
+impl Display for FoldLine {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            FoldLine::X(x) => write!(f, "fold at x={}", x),
+            FoldLine::Y(y) => write!(f, "fold at y={}", y),
+        }
     }
 }
 
@@ -96,9 +108,8 @@ fn print_dots(dots: &HashSet<Dot>) {
     for y in min_y..=max_y {
         for x in min_x..=max_x {
             if dots.contains(&Dot::new(x, y)) {
-                print!("#");
+                print!("█");
             } else {
-                //print!(".");
                 print!(" ");
             }
         }
@@ -132,7 +143,7 @@ fn main() -> SimpleResult<()> {
             dots
         });
         //println!("{:?} |{}", dots, dots.len());
-        println!("After {:?} there are {} dots", fl, dots.len());
+        println!("After {} there are {} dots", fl, dots.len());
     }
     print_dots(&dots);
 
