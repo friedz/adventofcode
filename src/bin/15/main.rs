@@ -3,7 +3,6 @@ use std::{
     collections::BinaryHeap,
     cmp::Ordering,
     error::Error,
-    fmt::Display,
     ops::{
         Index,
         IndexMut,
@@ -15,15 +14,14 @@ use simple_error::{
     simple_error,
     SimpleResult,
 };
-use priority_queue::PriorityQueue;
 
 #[derive(Debug)]
-struct RiskMap<T> {
+struct RiskMap {
     height: usize,
     width: usize,
-    map: Vec<T>,
+    map: Vec<usize>,
 }
-fn from_char(c: &char) -> SimpleResult<u8> {
+fn from_char(c: &char) -> SimpleResult<usize> {
     Ok(match c {
         '0' => 0,
         '1' => 1,
@@ -39,7 +37,7 @@ fn from_char(c: &char) -> SimpleResult<u8> {
     })
 }
 
-impl FromStr for RiskMap<u8> {
+impl FromStr for RiskMap {
     type Err = SimpleError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -62,20 +60,19 @@ impl FromStr for RiskMap<u8> {
         })
     }
 }
-impl<T> Index<(usize, usize)> for RiskMap<T> {
-    type Output = T;
+impl Index<(usize, usize)> for RiskMap {
+    type Output = usize;
 
     fn index(&self, (x, y): (usize, usize)) -> &Self::Output {
         &self.map[x + y * self.width]
     }
 }
-impl<T> IndexMut<(usize, usize)> for RiskMap<T> {
+impl IndexMut<(usize, usize)> for RiskMap {
     fn index_mut(&mut self, (x, y): (usize, usize)) -> &mut Self::Output {
         &mut self.map[x + y * self.width]
     }
 }
-
-impl<T: Display> RiskMap<T> {
+impl RiskMap {
     fn ansi_print(&self) {
         for y in 0..self.height {
             for x in 0..self.width {
@@ -84,9 +81,7 @@ impl<T: Display> RiskMap<T> {
             println!("");
         }
     }
-}
-impl<T: Copy> RiskMap<T> {
-    fn neighbors(&self, x: usize, y: usize) -> Vec<((usize, usize), T)> {
+    fn neighbors(&self, x: usize, y: usize) -> Vec<((usize, usize), usize)> {
         let mut res = Vec::new();
         if x > 0 {
             res.push(((x - 1, y), self[(x - 1, y)]));
@@ -102,17 +97,30 @@ impl<T: Copy> RiskMap<T> {
         }
         res
     }
-}
-impl RiskMap<usize> {
-    fn max(width: usize, height: usize) -> RiskMap<usize> {
+    fn scale(&self, n: usize) -> Self {
+        let mut scaled = RiskMap {
+            height: self.height * n,
+            width: self.width * n,
+            map: Vec::new(),
+        };
+        for y in 0..scaled.height {
+            let y_local = y % self.height;
+            for x in 0..scaled.width {
+                let x_local = x % self.width;
+                let scale = x/self.width + y/self.height;
+                let next = self[(x_local, y_local)] + scale;
+                scaled.map.push((next-1)%9 + 1)
+            }
+        }
+        scaled
+    }
+    fn max(width: usize, height: usize) -> RiskMap {
         RiskMap {
             width: width,
             height: height,
             map: vec![usize::MAX; width*height],
         }
     }
-}
-impl<T: Copy> RiskMap<T> where usize: From<T> {
     fn score(&self) -> Option<usize> {
         let mut heap = BinaryHeap::new();
         let mut dist = RiskMap::max(self.width, self.height);
@@ -185,12 +193,15 @@ impl State {
 fn main() -> Result<(), Box<dyn Error>> {
     //let input = include_str!("example_input.txt");
     let input = include_str!("input.txt");
-    //let input = include_str!("input.txt");
     let map = RiskMap::from_str(input)?;
 
     map.ansi_print();
     //println!("{:?}", map);
     println!("\n{}", map.score().ok_or(simple_error!("couldnt find a path through the cave!"))?);
+
+    let scaled = map.scale(5);
+    //scaled.ansi_print();
+    println!("\n{}", scaled.score().ok_or(simple_error!("couldnt find a path through the cave!"))?);
 
     Ok(())
 }
