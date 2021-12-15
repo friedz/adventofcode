@@ -195,13 +195,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = include_str!("input.txt");
     let map = RiskMap::from_str(input)?;
 
-    map.ansi_print();
+    //map.ansi_print();
     //println!("{:?}", map);
     println!("\n{}", map.score().ok_or(simple_error!("couldnt find a path through the cave!"))?);
 
     let scaled = map.scale(5);
     //scaled.ansi_print();
-    println!("\n{}", scaled.score().ok_or(simple_error!("couldnt find a path through the cave!"))?);
+    println!("{}", scaled.score().ok_or(simple_error!("couldnt find a path through the cave!"))?);
 
     Ok(())
 }
