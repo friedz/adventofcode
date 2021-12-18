@@ -1,5 +1,9 @@
 
 use std::{
+    cmp::{
+        max,
+        min,
+    },
     error::Error,
     fmt::{
         self,
@@ -110,6 +114,55 @@ impl Operator {
             sum + packet.version_sum()
         })
     }
+    fn evaluate(&self) -> i64 {
+        match self.type_id {
+            0 => self.sub_packets.iter().fold(0, |sum, pack| pack.evaluate() + sum),
+            1 => self.sub_packets.iter().fold(1, |product, pack| pack.evaluate() * product),
+            2 => self.sub_packets[1..].iter().fold(self.sub_packets[0].evaluate(), |minimum, pack| {
+                min(minimum, pack.evaluate())
+            }),
+            3 => self.sub_packets[1..].iter().fold(self.sub_packets[0].evaluate(), |maximum, pack| {
+                max(maximum, pack.evaluate())
+            }),
+            5 => {
+                self.sub_packets[1..].iter()
+                    .fold((1, self.sub_packets[0].evaluate()), |(res, last), pack| {
+                        let this = pack.evaluate();
+                        if 1 == res && last > this {
+                            (1, this)
+                        } else {
+                            (0, this)
+                        }
+                    })
+                .0
+            },
+            6 => {
+                self.sub_packets[1..].iter()
+                    .fold((1, self.sub_packets[0].evaluate()), |(res, last), pack| {
+                        let this = pack.evaluate();
+                        if 1 == res && last < this {
+                            (1, this)
+                        } else {
+                            (0, this)
+                        }
+                    })
+                .0
+            },
+            7 => {
+                self.sub_packets[1..].iter()
+                    .fold((1, self.sub_packets[0].evaluate()), |(res, last), pack| {
+                        let this = pack.evaluate();
+                        if 1 == res && last == this {
+                            (1, this)
+                        } else {
+                            (0, this)
+                        }
+                    })
+                .0
+            },
+            _ => -1,
+        }
+    }
     fn from_slice(tid: u8, slice: &[bool]) -> (usize, Operator) {
         let mut sub_packets = Vec::new();
         let mut end = 1;
@@ -182,6 +235,12 @@ impl Packet {
             Type::Operator(o) => o.version_sum(),
         }
     }
+    fn evaluate(&self) -> i64 {
+        match &self.content {
+            Type::Literal(v) => *v,
+            Type::Operator(o) => o.evaluate(),
+        }
+    }
     fn from_bits(bits: &Bits) -> Packet {
         Self::from_slice(&bits[..]).1
     }
@@ -200,6 +259,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let bits = Bits::from_str(input)?;
     let packet = Packet::from_bits(&bits);
     println!("{}", packet.version_sum());
+    println!("{}", packet.evaluate());
 
     Ok(())
 }
@@ -220,6 +280,10 @@ mod tests {
     fn check_version_sum(input: &str, sum: u64) {
         let bits = Bits::from_str(input).unwrap();
         assert_eq!(sum, Packet::from_bits(&bits).version_sum());
+    }
+    fn check_evaluate(input: &str, value: i64) {
+        let bits = Bits::from_str(input).unwrap();
+        assert_eq!(value, Packet::from_bits(&bits).evaluate());
     }
     #[test]
     fn input_d2fe28() {
@@ -299,5 +363,45 @@ mod tests {
         let input = "A0016C880162017C3686B18A3D4780"; // 31
         // Pack { Op { Op { Op { Lit, Lit, Lit, Lit, Lit } } } }
         check_version_sum(input, 31);
+    }
+    #[test]
+    fn input_c200b40a82() {
+        let input = "C200B40A82";
+        check_evaluate(input, 3);
+    }
+    #[test]
+    fn input_04005AC33890() {
+        let input = "04005AC33890";
+        check_evaluate(input, 54);
+    }
+    #[test]
+    fn input_880086c3e88112() {
+        let input = "880086C3E88112";
+        check_evaluate(input, 7);
+    }
+    #[test]
+    fn input_ce00c43d881120() {
+        let input = "CE00C43D881120";
+        check_evaluate(input, 9);
+    }
+    #[test]
+    fn input_d8005ac2a8f0() {
+        let input = "D8005AC2A8F0";
+        check_evaluate(input, 1);
+    }
+    #[test]
+    fn input_f600bc2d8f() {
+        let input = "F600BC2D8F";
+        check_evaluate(input, 0);
+    }
+    #[test]
+    fn input_9c005ac2f8f0() {
+        let input = "9C005AC2F8F0";
+        check_evaluate(input, 0);
+    }
+    #[test]
+    fn input_9c0141080250320f1802104a08() {
+        let input = "9C0141080250320F1802104A08";
+        check_evaluate(input, 1);
     }
 }
