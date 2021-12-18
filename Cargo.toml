@@ -7,3 +7,6 @@ edition = "2021"
 [dependencies]
 csv = "1.1"
 simple-error = "0.2.3"
+
+[profile.release]
+debug = true
