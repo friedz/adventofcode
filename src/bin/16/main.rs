@@ -370,7 +370,7 @@ mod tests {
         check_evaluate(input, 3);
     }
     #[test]
-    fn input_04005AC33890() {
+    fn input_04005ac33890() {
         let input = "04005AC33890";
         check_evaluate(input, 54);
     }
