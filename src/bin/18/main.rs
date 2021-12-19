@@ -1,0 +1,190 @@
+
+use std::{
+    fmt::{
+        self,
+        Debug,
+        Display,
+    },
+    ops::Add,
+    str::FromStr,
+};
+use simple_error::{
+    SimpleError,
+    simple_error,
+    SimpleResult,
+};
+#[derive(Debug, Clone, Eq, PartialEq)]
+enum Element {
+    RegularNumber(u8),
+    SnailfishNumber(Box<SnailfishNumber>),
+}
+impl Display for Element {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Element::RegularNumber(n) => write!(f, "{}", n),
+            Element::SnailfishNumber(sn) => write!(f, "{}", *sn),
+        }
+    }
+}
+impl Element {
+    fn magnitude(&self) -> u64 {
+        match self {
+            Element::RegularNumber(n) => *n as u64,
+            Element::SnailfishNumber(sn) => sn.magnitude(),
+        }
+    }
+}
+
+#[derive(Clone, Eq, PartialEq)]
+struct SnailfishNumber([Element; 2]);
+
+impl FromStr for SnailfishNumber {
+    type Err = SimpleError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut stack = s.chars().try_fold(Vec::new(), |mut stack, c| {
+            match c {
+                ']' => {
+                    let right = stack.pop().ok_or(simple_error!("malformed snailfish number"))?;
+                    let left = stack.pop().ok_or(simple_error!("malformed snailfish number"))?;
+                    stack.push(Element::SnailfishNumber(Box::new(SnailfishNumber([left, right]))));
+                },
+                '0' => stack.push(Element::RegularNumber(0)),
+                '1' => stack.push(Element::RegularNumber(1)),
+                '2' => stack.push(Element::RegularNumber(2)),
+                '3' => stack.push(Element::RegularNumber(3)),
+                '4' => stack.push(Element::RegularNumber(4)),
+                '5' => stack.push(Element::RegularNumber(5)),
+                '6' => stack.push(Element::RegularNumber(6)),
+                '7' => stack.push(Element::RegularNumber(7)),
+                '8' => stack.push(Element::RegularNumber(8)),
+                '9' => stack.push(Element::RegularNumber(9)),
+                '[' | ',' => {},
+                w if w.is_whitespace() => {},
+                e => return Err(simple_error!("{:?} is not a valid charakter in a snailfisch number!", e)),
+            }
+            Ok(stack)
+        }).or_else(|e| Err(simple_error!("{:?}", e)))?;
+        match stack.pop().ok_or(simple_error!("malformed snailfish number"))? {
+            Element::RegularNumber(n) => Err(simple_error!("{:?} is not a complete snailfish number!", n)),
+            Element::SnailfishNumber(sn) => Ok(*sn)
+        }
+    }
+}
+impl Display for SnailfishNumber {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[{},{}]", self.0[0], self.0[1])
+    }
+}
+impl Debug for SnailfishNumber {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+impl Add for SnailfishNumber {
+    type Output = SnailfishNumber;
+    fn add(self, rhs: SnailfishNumber) -> Self::Output {
+        let mut res = SnailfishNumber([
+            Element::SnailfishNumber(Box::new(self)),
+            Element::SnailfishNumber(Box::new(rhs))
+        ]);
+        res.reduce();
+        res
+    }
+}
+impl SnailfishNumber {
+    fn reduce(&mut self) {
+    }
+    fn magnitude(&self) -> u64 {
+        3 * self.0[0].magnitude() + 2 * self.0[1].magnitude()
+    }
+}
+
+fn main() -> SimpleResult<()> {
+    let input = "[1,2]";
+    let input = "[1,2]
+[[1,2],3]
+[9,[8,7]]
+[[1,9],[8,5]]
+[[[[1,2],[3,4]],[[5,6],[7,8]]],9]
+[[[9,[3,8]],[[0,9],6]],[[[3,7],[4,9]],3]]
+[[[[1,3],[5,3]],[[1,3],[8,7]]],[[[4,9],[6,9]],[[8,2],[7,3]]]]";
+    let mut numbers = Vec::new();
+    for line in input.lines() {
+        let sn = SnailfishNumber::from_str(line)?;
+        println!("{}", sn);
+        numbers.push(sn);
+
+    }
+    println!("{}", numbers[0].clone() + numbers[1].clone() + numbers[0].clone());
+
+    println!("day 18");
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::SnailfishNumber;
+    use std::str::FromStr;
+    use simple_error::SimpleResult;
+    #[test]
+    fn simple_addition() {
+        let res = SnailfishNumber::from_str("[1,1]").unwrap()
+            + SnailfishNumber::from_str("[2,2]").unwrap()
+            + SnailfishNumber::from_str("[3,3]").unwrap()
+            + SnailfishNumber::from_str("[4,4]").unwrap();
+        assert_eq!(res, SnailfishNumber::from_str("[[[[1,1],[2,2]],[3,3]],[4,4]]").unwrap());
+    }
+    #[test]
+    fn addition_with_explosion() {
+        let res = SnailfishNumber::from_str("[1,1]").unwrap()
+            + SnailfishNumber::from_str("[2,2]").unwrap()
+            + SnailfishNumber::from_str("[3,3]").unwrap()
+            + SnailfishNumber::from_str("[4,4]").unwrap()
+            + SnailfishNumber::from_str("[5,5]").unwrap();
+        assert_eq!(res, SnailfishNumber::from_str("[[[[3,0],[5,3]],[4,4]],[5,5]]").unwrap());
+
+        let res = SnailfishNumber::from_str("[1,1]").unwrap()
+            + SnailfishNumber::from_str("[2,2]").unwrap()
+            + SnailfishNumber::from_str("[3,3]").unwrap()
+            + SnailfishNumber::from_str("[4,4]").unwrap()
+            + SnailfishNumber::from_str("[5,5]").unwrap()
+            + SnailfishNumber::from_str("[6,6]").unwrap();
+        assert_eq!(res, SnailfishNumber::from_str("[[[[5,0],[7,4]],[5,5]],[6,6]]").unwrap());
+
+        let res = SnailfishNumber::from_str("[[[0,[4,5]],[0,0]],[[[4,5],[2,6]],[9,5]]]").unwrap()
+            + SnailfishNumber::from_str("[7,[[[3,7],[4,3]],[[6,3],[8,8]]]]").unwrap()
+            + SnailfishNumber::from_str("[[2,[[0,8],[3,4]]],[[[6,7],1],[7,[1,6]]]]").unwrap()
+            + SnailfishNumber::from_str("[[[[2,4],7],[6,[0,5]]],[[[6,8],[2,8]],[[2,1],[4,5]]]]").unwrap()
+            + SnailfishNumber::from_str("[7,[5,[[3,8],[1,4]]]]").unwrap()
+            + SnailfishNumber::from_str("[[2,[2,2]],[8,[8,1]]]").unwrap()
+            + SnailfishNumber::from_str("[2,9]").unwrap()
+            + SnailfishNumber::from_str("[1,[[[9,3],9],[[9,0],[0,7]]]]").unwrap()
+            + SnailfishNumber::from_str("[[[5,[7,4]],7],1]").unwrap()
+            + SnailfishNumber::from_str("[[[[4,2],2],6],[8,7]]").unwrap();
+        assert_eq!(res, SnailfishNumber::from_str("[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]").unwrap());
+    }
+    #[test]
+    fn magnitude() {
+        assert_eq!(143, SnailfishNumber::from_str("[[1,2],[[3,4],5]]").unwrap().magnitude());
+        assert_eq!(1384, SnailfishNumber::from_str("[[[[0,7],4],[[7,8],[6,0]]],[8,1]]").unwrap().magnitude());
+        assert_eq!(445, SnailfishNumber::from_str("[[[[1,1],[2,2]],[3,3]],[4,4]]").unwrap().magnitude());
+        assert_eq!(791, SnailfishNumber::from_str("[[[[3,0],[5,3]],[4,4]],[5,5]]").unwrap().magnitude());
+        assert_eq!(1137, SnailfishNumber::from_str("[[[[5,0],[7,4]],[5,5]],[6,6]]").unwrap().magnitude());
+        assert_eq!(3488, SnailfishNumber::from_str("[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]").unwrap().magnitude());
+    }
+    #[test]
+    fn example_homework() {
+        let input = include_str!("example_input.txt");
+        let numbers = input.lines().try_fold(Vec::new(), |mut numbers, line| -> SimpleResult<Vec<SnailfishNumber>> {
+            let line = line.trim();
+            numbers.push(SnailfishNumber::from_str(line)?);
+            Ok(numbers)
+        }).unwrap();
+        let res = numbers[1..].into_iter().fold(numbers[0].clone(), |res, sn| {
+            res + sn.clone()
+        });
+        assert_eq!(res, SnailfishNumber::from_str("[[[[6,6],[7,6]],[[7,7],[7,0]]],[[[7,7],[7,7]],[[7,8],[9,9]]]]").unwrap());
+        assert_eq!(res.magnitude(), 4140);
+    }
+}
