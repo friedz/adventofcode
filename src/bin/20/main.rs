@@ -138,18 +138,16 @@ fn main() -> SimpleResult<()> {
     let ea = EnhancementAlgorithm::from_str(input.next().ok_or(simple_error!("no first line"))?)?;
     let mut tm = TrenchMap::from_str(input.next().ok_or(simple_error!("no trench map"))?)?;
     let mut tm1 = tm.clone();
-    for i in 1..=2 {
+    for _ in 1..=2 {
         //tm1.print();
         tm1 = ea.enhance(&tm1);
-        println!("{}: {}", i, tm1.number_of_light_pixel());
     }
-    println!("{}", tm1.number_of_light_pixel());
-    for i in 1..=50 {
+    println!("Part 1: {}", tm1.number_of_light_pixel());
+    for _ in 1..=50 {
         //tm.print();
         tm = ea.enhance(&tm);
-        println!("{}: {}", i, tm.number_of_light_pixel());
     }
-    println!("{}", tm.number_of_light_pixel());
+    println!("Part 2: {}", tm.number_of_light_pixel());
 
     Ok(())
 }
