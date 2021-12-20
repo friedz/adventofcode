@@ -1,5 +1,6 @@
 
 use std::{
+    cmp::max,
     fmt::{
         self,
         Debug,
@@ -221,6 +222,16 @@ fn main() -> SimpleResult<()> {
         res + sn.clone()
     });
     println!("{} -> {}", res, res.magnitude());
+
+    let mut part_two = 0;
+    for i in 0..numbers.len() {
+        for j in 0..numbers.len() {
+            if i != j {
+                part_two = max(part_two, (numbers[i].clone() + numbers[j].clone()).magnitude());
+            }
+        }
+    }
+    println!("{}", part_two);
 
     Ok(())
 }
