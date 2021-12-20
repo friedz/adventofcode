@@ -33,6 +33,12 @@ impl Element {
             Element::SnailfishNumber(sn) => sn.magnitude(),
         }
     }
+    fn get_regular_number(&self) -> SimpleResult<u8> {
+        match self {
+            Element::RegularNumber(n) => Ok(*n),
+            Element::SnailfishNumber(sn) => Err(simple_error!("{} is not a regular number!", sn)),
+        }
+    }
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -92,7 +98,112 @@ impl Add for SnailfishNumber {
     }
 }
 impl SnailfishNumber {
-    fn reduce(&mut self) {
+    fn reduce(&mut self) -> SimpleResult<()> {
+        loop {
+            match self.explode(0)? {
+                None => {},
+                Some(_) => continue,
+            }
+            if self.split() {
+                continue;
+            } else {
+                break;
+            }
+        }
+        Ok(())
+    }
+    fn update_left(&mut self, left: u8) {
+        match &mut self.0[1] {
+            Element::RegularNumber(n) => *n += left,
+            Element::SnailfishNumber(sn) => sn.update_left(left),
+        }
+    }
+    fn update_right(&mut self, right: u8) {
+        match &mut self.0[0] {
+            Element::RegularNumber(n) => *n += right,
+            Element::SnailfishNumber(sn) => sn.update_right(right),
+        }
+    }
+    fn explode(&mut self, level: u8) -> SimpleResult<Option<(Option<u8>, Option<u8>)>> {
+        let left = match &mut self.0[0] {
+            Element::RegularNumber(_) => None,
+            Element::SnailfishNumber(sn) => {
+                if 3 == level {
+                    let left = sn.0[0].get_regular_number()?;
+                    let right = sn.0[1].get_regular_number()?;
+                    self.0[0] = Element::RegularNumber(0);
+                    Some((Some(left), Some(right)))
+                } else {
+                    sn.explode(level + 1)?
+                }
+            },
+        };
+        Ok(match left {
+            Some((left, Some(right))) => {
+                match &mut self.0[1] {
+                    Element::RegularNumber(n) => *n += right,
+                    Element::SnailfishNumber(sn) => sn.update_right(right),
+                }
+                Some((left, None))
+            },
+            Some((left, None)) => Some((left, None)),
+            None => {
+                let right = match &mut self.0[1] {
+                    Element::RegularNumber(_) => None,
+                    Element::SnailfishNumber(sn) => {
+                        if 3 == level {
+                            let left = sn.0[0].get_regular_number()?;
+                            let right = sn.0[1].get_regular_number()?;
+                            self.0[1] = Element::RegularNumber(0);
+                            Some((Some(left), Some(right)))
+                        } else {
+                            sn.explode(level + 1)?
+                        }
+                    },
+                };
+                match right {
+                    Some((Some(left), right)) => {
+                        match &mut self.0[0] {
+                            Element::RegularNumber(n) => *n += left,
+                            Element::SnailfishNumber(sn) => sn.update_left(left),
+                        }
+                        Some((None, right))
+                    },
+                    Some((None, right)) => Some((None, right)),
+                    None => {
+                        None
+                    },
+                }
+            },
+        })
+    }
+    fn simple(left: u8, right: u8) -> Box<SnailfishNumber> {
+        Box::new(SnailfishNumber([
+                Element::RegularNumber(left),
+                Element::RegularNumber(right)
+        ]))
+    }
+    fn split(&mut self) -> bool {
+        let left = match &mut self.0[0] {
+            Element::RegularNumber(n) if *n > 9 => {
+                self.0[0] = Element::SnailfishNumber(SnailfishNumber::simple(*n/2, (*n + 1)/2));
+                true
+            },
+            Element::RegularNumber(_) => false,
+            Element::SnailfishNumber(sn) => sn.split(),
+        };
+        if !left {
+            match &mut self.0[1] {
+                Element::RegularNumber(n) if *n > 9 => {
+                    self.0[1] = Element::SnailfishNumber(SnailfishNumber::simple(*n/2, (*n + 1)/2));
+                    true
+                },
+                Element::RegularNumber(_) => false,
+                Element::SnailfishNumber(sn) => sn.split(),
+            }
+        } else {
+            true
+        }
     }
     fn magnitude(&self) -> u64 {
         3 * self.0[0].magnitude() + 2 * self.0[1].magnitude()
@@ -100,24 +211,16 @@ impl SnailfishNumber {
 }
 
 fn main() -> SimpleResult<()> {
-    let input = "[1,2]";
-    let input = "[1,2]
-[[1,2],3]
-[9,[8,7]]
-[[1,9],[8,5]]
-[[[[1,2],[3,4]],[[5,6],[7,8]]],9]
-[[[9,[3,8]],[[0,9],6]],[[[3,7],[4,9]],3]]
-[[[[1,3],[5,3]],[[1,3],[8,7]]],[[[4,9],[6,9]],[[8,2],[7,3]]]]";
-    let mut numbers = Vec::new();
-    for line in input.lines() {
-        let sn = SnailfishNumber::from_str(line)?;
-        println!("{}", sn);
-        numbers.push(sn);
-
-    }
-    println!("{}", numbers[0].clone() + numbers[1].clone() + numbers[0].clone());
-
-    println!("day 18");
+    let input = include_str!("input.txt");
+    let numbers = input.lines().try_fold(Vec::new(), |mut numbers, line| -> SimpleResult<Vec<SnailfishNumber>> {
+        let line = line.trim();
+        numbers.push(SnailfishNumber::from_str(line)?);
+        Ok(numbers)
+    }).unwrap();
+    let res = numbers[1..].into_iter().fold(numbers[0].clone(), |res, sn| {
+        res + sn.clone()
+    });
+    println!("{} -> {}", res, res.magnitude());
 
     Ok(())
 }
@@ -151,7 +254,9 @@ mod tests {
             + SnailfishNumber::from_str("[5,5]").unwrap()
             + SnailfishNumber::from_str("[6,6]").unwrap();
         assert_eq!(res, SnailfishNumber::from_str("[[[[5,0],[7,4]],[5,5]],[6,6]]").unwrap());
-
+    }
+    #[test]
+    fn addition_with_explosion_and_split() {
         let res = SnailfishNumber::from_str("[[[0,[4,5]],[0,0]],[[[4,5],[2,6]],[9,5]]]").unwrap()
             + SnailfishNumber::from_str("[7,[[[3,7],[4,3]],[[6,3],[8,8]]]]").unwrap()
             + SnailfishNumber::from_str("[[2,[[0,8],[3,4]]],[[[6,7],1],[7,[1,6]]]]").unwrap()
