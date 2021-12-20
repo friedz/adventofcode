@@ -13,13 +13,14 @@ use simple_error::{
 struct TrenchMap {
     width: usize,
     height: usize,
+    outside: bool,
     map: Vec<bool>,
 }
 impl FromStr for TrenchMap {
     type Err = SimpleError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         s.chars().try_fold(
-            TrenchMap { width: 0, height: 0, map: Vec::new() },
+            TrenchMap { width: 0, height: 0, outside: false, map: Vec::new() },
             |mut tm, c| {
                 match c {
                     '.' => tm.map.push(false),
@@ -38,7 +39,7 @@ impl Index<(i64, i64)> for TrenchMap {
     type Output = bool;
     fn index(&self, (x, y): (i64, i64)) -> &Self::Output {
         if x < 0 || y < 0 || x >= self.width as i64 || y >= self.height as i64 {
-            &false
+            &self.outside
         } else {
             let x = x as usize;
             let y = y as usize;
@@ -85,6 +86,9 @@ impl TrenchMap {
             }
         })
     }
+    fn outside(&self) -> bool {
+        self.outside
+    }
 }
 
 #[derive(Debug)]
@@ -117,6 +121,11 @@ impl EnhancementAlgorithm {
         TrenchMap {
             width: tm.width() + 2,
             height: tm.height() + 2,
+            outside: if tm.outside() {
+                self.lookup[self.lookup.len() - 1]
+            } else {
+                self.lookup[0]
+            },
             map: new_map,
         }
     }
