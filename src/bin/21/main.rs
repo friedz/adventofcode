@@ -1,13 +1,15 @@
 
-use std::error::Error;
+use std::{
+    cmp,
+    error::Error,
+};
 use simple_error::{
     SimpleError,
     simple_error,
     SimpleResult,
 };
 
-//const WIN_SCORE: usize = 21;
-const WIN_SCORE: usize = 10;
+const WIN_SCORE: usize = 21;
 
 #[derive(Debug, Clone, Copy)]
 enum Id {
@@ -36,10 +38,11 @@ impl Player {
         Player::new(pos, Id::Two)
     }
     fn turn(&self, step: usize) -> Player {
+        let new_pos = (self.position + step) % 10;
         Player {
             id: self.id,
-            position: (self.position + step) % 10,
-            score: self.score + if self.position == 0 { 10 } else { self.position },
+            position: new_pos,
+            score: self.score + if new_pos == 0 { 10 } else { new_pos },
         }
     }
     fn won(&self) -> bool {
@@ -50,35 +53,23 @@ impl Player {
     }
 }
 
-fn play(player: [Player; 2]) -> (usize, usize) {
-    if player[0].won() {
-        match player[0].id() {
-            Id::One => return (1, 0),
-            Id::Two => return (0, 1),
-        }
-    }
+fn play(player: [Player; 2], universes: usize) -> (usize, usize) {
     if player[1].won() {
         match player[1].id() {
-            Id::One => return (1, 0),
-            Id::Two => return (0, 1),
+            Id::One => return (universes, 0),
+            Id::Two => return (0, universes),
         }
     }
-
-    let (one3, two3) = play([player[1], player[0].turn(3)]);
-    let (one4, two4) = play([player[1], player[0].turn(4)]);
-    let (one4, two4) = (one4*3, two4*3);
-    let (one5, two5) = play([player[1], player[0].turn(5)]);
-    let (one5, two5) = (one5*6, two5*6);
-    let (one6, two6) = play([player[1], player[0].turn(6)]);
-    let (one6, two6) = (one6*7, two6*7);
-    let (one7, two7) = play([player[1], player[0].turn(7)]);
-    let (one7, two7) = (one7*6, two7*6);
-    let (one8, two8) = play([player[1], player[0].turn(8)]);
-    let (one8, two8) = (one8*3, two8*3);
-    let (one9, two9) = play([player[1], player[0].turn(9)]);
+    let (one3, two3) = play([player[1], player[0].turn(3)], 1);
+    let (one4, two4) = play([player[1], player[0].turn(4)], 3);
+    let (one5, two5) = play([player[1], player[0].turn(5)], 6);
+    let (one6, two6) = play([player[1], player[0].turn(6)], 7);
+    let (one7, two7) = play([player[1], player[0].turn(7)], 6);
+    let (one8, two8) = play([player[1], player[0].turn(8)], 3);
+    let (one9, two9) = play([player[1], player[0].turn(9)], 1);
     (
-        one3 + one4 + one5 + one6 + one7 + one8 + one9,
-        two3 + two4 + two5 + two6 + two7 + two8 + two9
+        (one3 + one4 + one5 + one6 + one7 + one8 + one9) * universes,
+        (two3 + two4 + two5 + two6 + two7 + two8 + two9) * universes
     )
 }
 
@@ -132,9 +123,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     println!("");
 
-    //println!("{:?}", play([Player::one(one), Player::two(two)]));
-    println!("{:?}", play([Player::one(4), Player::two(8)]));
-    println!("{:?}", play([Player::two(8), Player::one(4)]));
+    let res = play([Player::one(one), Player::two(two)], 1);
+    println!("Player 1 won in {} universes and player 2 in {}", res.0, res.1);
+    if res.0 > res.1 {
+        println!("which means playler 1 wins in more universes, namly {}", res.0)
+    } else if res.1 > res.0 {
+        println!("which means playler 2 wins in more universes, namly {}", res.1)
+    } else {
+        println!("which means they both win in exactly the same number of universes universes, namly {}", res.1)
+    }
 
     Ok(())
 }
