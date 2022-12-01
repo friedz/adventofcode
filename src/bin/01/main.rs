@@ -1,5 +1,10 @@
+#![feature(is_sorted)]
 
-use std::io::BufRead;
+use std::{
+    io::BufRead,
+    mem,
+    cmp
+};
 
 fn get_input(input: &str) -> Vec<u32> {
     let buf = input.as_bytes();
@@ -16,16 +21,26 @@ fn get_input(input: &str) -> Vec<u32> {
     elves
 }
 
+fn max_n(n: usize, arr: &Vec<u32>) -> Vec<u32> {
+    arr.iter().fold(vec![0; n], |mut res, tmp| {
+        let mut tmp = *tmp;
+        for el in res.iter_mut() {
+            if tmp > *el {
+                mem::swap(&mut tmp, el);
+            }
+        }
+        res
+    })
+}
+
 fn main() {
     let input = include_str!("input.txt");
-    let mut calorie_list = get_input(&input);
-    calorie_list.sort();
-    let maximum = calorie_list.last().unwrap();
-    println!("maximumt number of calories caried by a single elve is: {}", maximum);
-    let second = calorie_list[calorie_list.len() - 2];
-    let third = calorie_list[calorie_list.len() - 3];
-    println!("the 3 most carrying elves carry: {}, {} & {}", maximum, second, third);
-    println!("wich is together: {}", maximum + second + third);
+    let calorie_list = get_input(&input);
+
+    let maximum_3 = max_n(3, &calorie_list);
+    println!("maximumt number of calories caried by a single elve is: {} kcal", maximum_3[0]);
+    println!("the 3 most carrying elves carry: {} kcal, {} kcal & {} kcal", maximum_3[0], maximum_3[1], maximum_3[2]);
+    println!("wich is together: {} kcal", maximum_3.iter().sum::<u32>());
 }
 
 #[cfg(test)]
@@ -47,23 +62,25 @@ mod tests {
         assert_eq!(input[4], 10000);
     }
     #[test]
+    fn max_n_is_sorted() {
+        let input = vec![6000, 4000, 11000, 24000, 10000];
+
+        assert!(max_n(4, &input).as_slice().is_sorted_by(|a,b| Some(b.cmp(&a))));
+    }
+    #[test]
     fn find_maximum() {
-        let mut input = vec![6000, 4000, 11000, 24000, 10000];
-        input.sort();
-        assert_eq!(*input.last().unwrap(), 24000);
+        let input = vec![6000, 4000, 11000, 24000, 10000];
+
+        assert_eq!(max_n(1, &input)[0], 24000);
     }
     #[test]
     fn find_max_3() {
-        let mut input = vec![6000, 4000, 11000, 24000, 10000];
-        input.sort();
-        let maximum = *input.last().unwrap();
-        let second = input[input.len() - 2];
-        let third = input[input.len() - 3];
+        let input = vec![6000, 4000, 11000, 24000, 10000];
 
-        assert_eq!(maximum, 24000);
-        assert_eq!(second, 11000);
-        assert_eq!(third, 10000);
-
-        assert_eq!(maximum + second + third, 45000);
+        let max_3 = max_n(3, &input);
+        assert_eq!(max_3[0], 24000);
+        assert_eq!(max_3[1], 11000);
+        assert_eq!(max_3[2], 10000);
+        assert_eq!(max_3.iter().sum::<u32>(), 45000);
     }
 }
