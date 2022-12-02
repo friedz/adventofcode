@@ -3,7 +3,6 @@
 use std::{
     io::BufRead,
     mem,
-    cmp
 };
 
 fn get_input(input: &str) -> Vec<u32> {
