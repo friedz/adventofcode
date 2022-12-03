@@ -1,8 +1,8 @@
 
 use std::{
-    collections::HashSet,
     io::BufRead,
 };
+use im::hashset::HashSet;
 
 fn type_score(c: u8) -> u32 {
     if 65 <= c && c <= 90 {
@@ -19,30 +19,15 @@ fn read_rucksacks(data: &str) -> (u32, u32) {
         let line = line.unwrap();
         let line = line.as_bytes();
 
-        let compartment1 = line[..line.len()/2].into_iter().fold(HashSet::new(), |mut hs, c| {
-            hs.insert(c.clone());
-            hs
-        });
-        let compartment2 = line[line.len()/2..].into_iter().fold(HashSet::new(), |mut hs, c| {
-            hs.insert(c.clone());
-            hs
-        });
-        let shared_type: u8 = *compartment1.intersection(&compartment2).next().unwrap();
+        let compartment1: HashSet<_> = HashSet::from(&line[..line.len()/2]);
+        let compartment2: HashSet<_> = HashSet::from(&line[line.len()/2..]);
+        let shared_type = *compartment1.intersection(compartment2).iter().next().unwrap();
         part1 = type_score(shared_type) + part1;
 
         if count == 0 {
-            set = line.iter().fold(HashSet::new(), |mut s, t| {
-                s.insert(t.clone());
-                s
-            });
+            set = HashSet::from(line);
         } else {
-            set = set.intersection(&line.iter().fold(HashSet::new(), |mut s, t| {
-                s.insert(t.clone());
-                s
-            })).fold(HashSet::new(), |mut s, t| {
-                s.insert(t.clone());
-                s
-            });
+            set = set.intersection(HashSet::from(line));
         }
         if count == 2 {
             part2 = part2 + type_score(set.into_iter().next().unwrap());
