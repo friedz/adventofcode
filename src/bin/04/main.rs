@@ -71,6 +71,7 @@ mod tests {
     #[test]
     fn count_number_overlaps() {
         assert_eq!(count_overlaps(&DATA), 4);
+        // second section completely overlaps the first section
+        assert_eq!(count_overlaps(&[((2, 3), (1, 4))]), 1);
     }
-
 }
