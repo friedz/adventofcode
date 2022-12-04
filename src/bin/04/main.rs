@@ -21,12 +21,27 @@ fn count_total_overlaps(data: &[((u32, u32), (u32, u32))]) -> u32 {
     })
 }
 
+fn count_overlaps(data: &[((u32, u32), (u32, u32))]) -> u32 {
+    data.iter().fold(0, |overlaps, ((min_a, max_a), (min_b, max_b))| {
+        overlaps + if (min_a <= min_b && max_a >= min_b)
+            || (min_a <= max_b && max_a >= max_b)
+            || (min_b <= min_a && max_b >= max_a) {
+                1
+            } else {
+                0
+        }
+    })
+}
+
 fn main() {
     let input = include_str!("input.txt");
     let data = read_input(input);
 
     let overlaps = count_total_overlaps(&data);
     println!("Part 1: {}", overlaps);
+
+    let overlaps = count_overlaps(&data);
+    println!("Part 2: {}", overlaps);
 }
 
 #[cfg(test)]
@@ -50,7 +65,12 @@ mod tests {
         assert_eq!(data.as_slice(), DATA.as_slice());
     }
     #[test]
-    fn count_overlaps() {
+    fn count_total_number_overlaps() {
         assert_eq!(count_total_overlaps(&DATA), 2);
     }
+    #[test]
+    fn count_number_overlaps() {
+        assert_eq!(count_overlaps(&DATA), 4);
+    }
+
 }
