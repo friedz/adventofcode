@@ -23,9 +23,7 @@ fn count_total_overlaps(data: &[((u32, u32), (u32, u32))]) -> u32 {
 
 fn count_overlaps(data: &[((u32, u32), (u32, u32))]) -> u32 {
     data.iter().fold(0, |overlaps, ((min_a, max_a), (min_b, max_b))| {
-        overlaps + if (min_a <= min_b && max_a >= min_b)
-            || (min_a <= max_b && max_a >= max_b)
-            || (min_b <= min_a && max_b >= max_a) {
+        overlaps + if !(max_a < min_b || min_a > max_b) {
                 1
             } else {
                 0
