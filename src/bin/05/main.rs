@@ -11,9 +11,20 @@ struct CargoStacks {
 }
 
 impl CargoStacks {
-    fn move_crates(&mut self, mv: &MoveInstruction) {
+    fn move_crates1(&mut self, mv: &MoveInstruction) {
         for _ in 0..mv.ammount() {
             let c = self.stacks[mv.from() - 1].pop().unwrap();
+            self.stacks[mv.to() - 1].push(c);
+        }
+    }
+    fn move_crates_full(&mut self, mv: &MoveInstruction) {
+        let mut tmp = Vec::new();
+        for _ in 0..mv.ammount() {
+            let c = self.stacks[mv.from() - 1].pop().unwrap();
+            tmp.push(c);
+        }
+        for _ in 0..mv.ammount() {
+            let c = tmp.pop().unwrap();
             self.stacks[mv.to() - 1].push(c);
         }
     }
@@ -114,9 +125,15 @@ fn parse_input(input: &str) -> (CargoStacks, Vec<MoveInstruction>) {
     (cargo_stacks, move_instructions)
 }
 
-fn run_all_moves(cargo_stacks: CargoStacks, mvs: Vec<MoveInstruction>) -> CargoStacks {
+fn part1_moves(cargo_stacks: CargoStacks, mvs: &Vec<MoveInstruction>) -> CargoStacks {
     mvs.iter().fold(cargo_stacks, |mut cs, mv| {
-        cs.move_crates(mv);
+        cs.move_crates1(mv);
+        cs
+    })
+}
+fn part2_moves(cargo_stacks: CargoStacks, mvs: &Vec<MoveInstruction>) -> CargoStacks {
+    mvs.iter().fold(cargo_stacks, |mut cs, mv| {
+        cs.move_crates_full(mv);
         cs
     })
 }
@@ -124,8 +141,10 @@ fn run_all_moves(cargo_stacks: CargoStacks, mvs: Vec<MoveInstruction>) -> CargoS
 fn main() {
     let input = include_str!("input.txt");
     let (cs, mvs) = parse_input(input);
-    let cs = run_all_moves(cs, mvs);
-    println!("Part 1: {}", cs.tops());
+    let cs1 = part1_moves(cs.clone(), &mvs);
+    println!("Part 1: {}", cs1.tops());
+    let cs2 = part2_moves(cs, &mvs);
+    println!("Part 2: {}", cs2.tops());
 }
 
 #[cfg(test)]
@@ -150,13 +169,23 @@ move 3 from 1 to 3
 move 2 from 2 to 1
 move 1 from 1 to 2";
 
-    fn example_stacks() -> [CargoStacks; 5] {
+    fn example_stacks() -> CargoStacks {
+        CargoStacks { stacks: vec![vec!['Z', 'N'],vec!['M', 'C', 'D'],vec!['P'],] }
+    }
+    fn example_moves1() -> [CargoStacks; 4] {
         [
-            CargoStacks {stacks: vec![vec!['Z', 'N'],vec!['M', 'C', 'D'],vec!['P'],],},
             CargoStacks {stacks: vec![vec!['Z', 'N', 'D'],vec!['M', 'C'],vec!['P'],],},
             CargoStacks {stacks: vec![vec![],vec!['M', 'C'],vec!['P', 'D', 'N', 'Z'],],},
             CargoStacks {stacks: vec![vec!['C', 'M'],vec![],vec!['P', 'D', 'N', 'Z'],],},
             CargoStacks {stacks: vec![vec!['C'],vec!['M'],vec!['P', 'D', 'N', 'Z'],],},
+        ]
+    }
+    fn example_moves2() -> [CargoStacks; 4] {
+        [
+            CargoStacks { stacks: vec![vec!['Z', 'N', 'D'],vec!['M', 'C'],vec!['P'],] },
+            CargoStacks { stacks: vec![vec![],vec!['M', 'C'],vec!['P', 'Z', 'N', 'D'],] },
+            CargoStacks { stacks: vec![vec!['M', 'C'],vec![],vec!['P', 'Z', 'N', 'D'],] },
+            CargoStacks { stacks: vec![vec!['M'],vec!['C'],vec!['P', 'Z', 'N', 'D'],] },
         ]
     }
     fn example_moves() -> Vec<MoveInstruction> {
@@ -183,34 +212,52 @@ move 1 from 1 to 2";
     }
     #[test]
     fn read_cargo_stacks() {
-        assert_eq!(CargoStacks::from_str(INPUT_STACKS).unwrap(), example_stacks()[0]);
+        assert_eq!(CargoStacks::from_str(INPUT_STACKS).unwrap(), example_stacks());
     }
     #[test]
     fn stack_tops() {
-        assert_eq!(example_stacks()[0].tops(), "NDP");
+        assert_eq!(example_stacks().tops(), "NDP");
     }
     #[test]
-    fn move_stacks() {
-        let mut cs = example_stacks()[0].clone();
+    fn move_stacks_part1() {
+        let mut cs = example_stacks();
         let m = example_moves();
         for i in 0..m.len() {
-            cs.move_crates(&m[i]);
-            assert_eq!(cs, example_stacks()[i + 1]);
+            cs.move_crates1(&m[i]);
+            assert_eq!(cs, example_moves1()[i]);
+        }
+    }
+    #[test]
+    fn move_stacks_part2() {
+        let mut cs = example_stacks();
+        let m = example_moves();
+        for i in 0..m.len() {
+            cs.move_crates_full(&m[i]);
+            assert_eq!(cs, example_moves2()[i]);
         }
     }
     #[test]
     fn parse_full_example() {
         let (crate_stacks, move_instructions) = parse_input(INPUT);
-        assert_eq!(crate_stacks, example_stacks()[0]);
+        assert_eq!(crate_stacks, example_stacks());
         assert_eq!(move_instructions, example_moves());
     }
     #[test]
-    fn run_all_moves_on_example() {
+    fn run_all_moves_on_example_part1() {
         let moves = example_moves();
-        let stacks = example_stacks()[0].clone();
+        let stacks = example_stacks();
 
-        let res_stacks = run_all_moves(stacks, moves);
-        assert_eq!(res_stacks, *example_stacks().last().unwrap());
+        let res_stacks = part1_moves(stacks, &moves);
+        assert_eq!(res_stacks, *example_moves1().last().unwrap());
         assert_eq!(res_stacks.tops(), "CMZ");
+    }
+    #[test]
+    fn run_all_moves_on_example_part2() {
+        let moves = example_moves();
+        let stacks = example_stacks();
+
+        let res_stacks = part2_moves(stacks, &moves);
+        assert_eq!(res_stacks, *example_moves2().last().unwrap());
+        assert_eq!(res_stacks.tops(), "MCD");
     }
 }
