@@ -43,7 +43,7 @@ fn main() {
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_day_01 {
     use super::*;
 
     #[test]

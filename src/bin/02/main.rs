@@ -124,7 +124,7 @@ fn main() {
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_day_02 {
     use super::*;
 
     static INPUT: &str = "A Y\nB X\nC Z";
