@@ -1,6 +1,7 @@
 
 use std::{
     collections::HashMap,
+    cmp,
     io::{
         self,
         BufRead,
@@ -193,11 +194,25 @@ fn part1(dir: &Dir) -> u32 {
         }
     })
 }
+fn part2(dir: &Dir) -> u32 {
+    let space = dir.size();
+    const NEEDET: u32 = 30_000_000;
+    let space_left = 70_000_000 - space;
+    dir.all_dirs().into_iter().fold(space, |del, path| {
+        let size = dir.get(&path).unwrap().size();
+        if space_left + size >= NEEDET {
+            cmp::min(del, size)
+        } else {
+            del
+        }
+    })
+}
 
 fn main() {
     let input = include_str!("input.txt");
     let data = Dir::from_str(&input).unwrap();
     println!("Part 1: {}", part1(&data));
+    println!("Part 2: {}", part2(&data));
 }
 
 #[cfg(test)]
@@ -251,6 +266,10 @@ $ ls
         }
     }
 
+    #[test]
+    fn smalles_thats_large_enough() {
+        assert_eq!(part2(&test_data()), 24933642);
+    }
     #[test]
     fn small_dirs_sum() {
         assert_eq!(part1(&test_data()), 95437);
