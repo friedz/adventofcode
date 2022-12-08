@@ -1,5 +1,6 @@
 
 use std::{
+    cmp,
     io::{
         self,
         BufRead,
@@ -7,8 +8,8 @@ use std::{
     str::FromStr,
 };
 
-macro_rules! check_x {
-    ($data:expr, $tree:expr, $range:expr, $y:expr) => {
+macro_rules! check {
+    ($data:expr, $tree:expr, $range:expr, $y:ident) => {
         {
             let mut visible = true;
             for ix in $range {
@@ -19,10 +20,8 @@ macro_rules! check_x {
             }
             visible
         }
-    }
-}
-macro_rules! check_y {
-    ($data:expr, $tree:expr, $x:expr, $range:expr) => {
+    };
+    ($data:expr, $tree:expr, $x:ident, $range:expr) => {
         {
             let mut visible = true;
             for iy in $range {
@@ -33,7 +32,33 @@ macro_rules! check_y {
             }
             visible
         }
-    }
+    };
+}
+macro_rules! view {
+    ($data:expr, $tree:expr, $x:ident, $range:expr) => {
+        {
+            let mut count = 0;
+            for iy in $range {
+                count += 1;
+                if $data[iy][$x] >= $tree {
+                    break;
+                }
+            }
+            count
+        }
+    };
+    ($data:expr, $tree:expr, $range:expr, $y:ident) => {
+        {
+            let mut count = 0;
+            for ix in $range {
+                count += 1;
+                if $data[$y][ix] >= $tree {
+                    break;
+                }
+            }
+            count
+        }
+    };
 }
 #[derive(Debug, Eq, PartialEq)]
 struct Grid {
@@ -55,10 +80,10 @@ impl Grid {
             return true;
         }
         let tree = self.data[y][x];
-        check_x!(self.data, tree, 0..x, y)
-            || check_x!(self.data, tree, x+1..self.width(), y)
-            || check_y!(self.data, tree, x, 0..y)
-            || check_y!(self.data, tree, x, y+1..self.height())
+        check!(self.data, tree, 0..x, y)
+            || check!(self.data, tree, x+1..self.width(), y)
+            || check!(self.data, tree, x, 0..y)
+            || check!(self.data, tree, x, y+1..self.height())
     }
     fn visible(&self) -> u32 {
         (0..self.height()).fold(0, |sum, y| {
@@ -68,6 +93,20 @@ impl Grid {
                 } else {
                     sum
                 }
+            })
+        })
+    }
+    fn view_score(&self, x: usize, y: usize) -> u32 {
+        let tree = self.data[y][x];
+        view!(self.data, tree, (0..x).rev(), y)
+            * view!(self.data, tree, x+1..self.width(), y)
+            * view!(self.data, tree, x, (0..y).rev())
+            * view!(self.data, tree, x, y+1..self.height())
+    }
+    fn best_view(&self) -> u32 {
+        (0..self.height()).fold(0, |view, y| {
+            (0..self.width()).fold(view, |view, x| {
+                cmp::max(self.view_score(x, y), view)
             })
         })
     }
@@ -93,6 +132,7 @@ fn main() {
     let input = include_str!("input.txt");
     let data = Grid::from_str(&input).unwrap();
     println!("Part 1: {}", data.visible());
+    println!("Part 2: {}", data.best_view());
 }
 
 #[cfg(test)]
@@ -149,5 +189,25 @@ mod tests_day_08 {
     #[test]
     fn count_visible() {
         assert_eq!(example_data().visible(), 21);
+    }
+    #[test]
+    fn scenic_tree() {
+        let data = example_data();
+        for x in 0..data.width() {
+            assert_eq!(data.view_score(x, 0), 0);
+            assert_eq!(data.view_score(x, data.height() - 1), 0);
+        }
+        for y in 0..data.height() {
+            assert_eq!(data.view_score(0, y), 0);
+            assert_eq!(data.view_score(data.width() - 1, y), 0);
+        }
+        assert_eq!(data.view_score(2, 1), 4);
+        assert_eq!(data.view_score(2, 3), 8);
+
+    }
+    #[test]
+    fn best_view_score() {
+        let data = example_data();
+        assert_eq!(data.best_view(), 8);
     }
 }
