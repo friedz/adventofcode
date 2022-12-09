@@ -54,37 +54,30 @@ fn parse_moves(input: &str) -> Vec<Move> {
 
 #[derive(Debug, Eq, PartialEq)]
 struct Rope {
-    head: (i32, i32),
     tail: Vec<(i32, i32)>,
     path: HashSet<(i32, i32)>,
 }
 impl Rope {
     fn new(len: usize) -> Rope {
         Rope {
-            head: (0, 0),
             tail: vec![(0, 0); len],
             path: HashSet::new(),
         }
     }
-    fn from_parts(head: (i32, i32), tail: (i32, i32), set: &[(i32, i32)]) -> Rope {
-        let mut vec = Vec::new();
-        vec.push(head);
-        vec.push(tail);
+    fn from_parts(tail: Vec<(i32, i32)>, set: &[(i32, i32)]) -> Rope {
         Rope {
-            head: head,
-            tail: vec,
+            tail: tail,
             path: HashSet::from(set),
         }
     }
     fn mv(&mut self, mv: &Move) {
         for _ in 0..**mv {
             match mv {
-                Move::Up(_) => self.head.1 += 1,
-                Move::Down(_) => self.head.1 -= 1,
-                Move::Right(_) => self.head.0 += 1,
-                Move::Left(_) => self.head.0 -= 1,
+                Move::Up(_) => self.tail[0].1 += 1,
+                Move::Down(_) => self.tail[0].1 -= 1,
+                Move::Right(_) => self.tail[0].0 += 1,
+                Move::Left(_) => self.tail[0].0 -= 1,
             }
-            self.tail[0] = self.head;
             for i in 1..self.tail.len() {
                 match (self.tail[i - 1].0 - self.tail[i].0, self.tail[i - 1].1 - self.tail[i].1) {
                     (0 | 1, 0 | 1) => {}
@@ -181,30 +174,30 @@ U 20";
     fn move_a_step() {
         let mut rope = Rope::new(2);
         rope.mv(&Up(4));
-        assert_eq!(rope, Rope::from_parts((0, 4), (0, 3), &[(0, 0), (0, 1), (0, 2), (0, 3)]));
+        assert_eq!(rope, Rope::from_parts(vec![(0, 4), (0, 3)], &[(0, 0), (0, 1), (0, 2), (0, 3)]));
         let mut rope = Rope::new(2);
         rope.mv(&Down(4));
-        assert_eq!(rope, Rope::from_parts((0, -4), (0, -3), &[(0, 0), (0, -1), (0, -2), (0, -3)]));
+        assert_eq!(rope, Rope::from_parts(vec![(0, -4), (0, -3)], &[(0, 0), (0, -1), (0, -2), (0, -3)]));
         let mut rope = Rope::new(2);
         rope.mv(&Left(4));
-        assert_eq!(rope, Rope::from_parts((-4, 0), (-3, 0), &[(0, 0), (-1, 0), (-2, 0), (-3, 0)]));
+        assert_eq!(rope, Rope::from_parts(vec![(-4, 0), (-3, 0)], &[(0, 0), (-1, 0), (-2, 0), (-3, 0)]));
         let mut rope = Rope::new(2);
         rope.mv(&Right(4));
-        assert_eq!(rope, Rope::from_parts((4, 0), (3, 0), &[(0, 0), (1, 0), (2, 0), (3, 0)]));
+        assert_eq!(rope, Rope::from_parts(vec![(4, 0), (3, 0)], &[(0, 0), (1, 0), (2, 0), (3, 0)]));
         let mut rope = Rope::new(2);
         rope.mv(&Right(1));
         rope.mv(&Up(2));
-        assert_eq!(rope, Rope::from_parts((1, 2), (1, 1), &[(0, 0), (1, 1)]));
+        assert_eq!(rope, Rope::from_parts(vec![(1, 2), (1, 1)], &[(0, 0), (1, 1)]));
         let mut rope = Rope::new(2);
         rope.mv(&Up(2));
         rope.mv(&Right(1));
-        assert_eq!(rope, Rope::from_parts((1, 2), (0, 1), &[(0, 0), (0, 1)]));
+        assert_eq!(rope, Rope::from_parts(vec![(1, 2), (0, 1)], &[(0, 0), (0, 1)]));
         let mut rope = Rope::new(2);
         rope.mv(&Up(2));
         rope.mv(&Down(1));
-        assert_eq!(rope, Rope::from_parts((0, 1), (0, 1), &[(0, 0), (0, 1)]));
+        assert_eq!(rope, Rope::from_parts(vec![(0, 1), (0, 1)], &[(0, 0), (0, 1)]));
         rope.mv(&Down(1));
-        assert_eq!(rope, Rope::from_parts((0, 0), (0, 1), &[(0, 0), (0, 1)]));
+        assert_eq!(rope, Rope::from_parts(vec![(0, 0), (0, 1)], &[(0, 0), (0, 1)]));
     }
     #[test]
     fn exapmple_part1_manual() {
@@ -215,38 +208,38 @@ U 20";
         path.push((1, 0));
         path.push((2, 0));
         path.push((3, 0));
-        assert_eq!(rope, Rope::from_parts((4, 0), (3, 0), &path[..]));
+        assert_eq!(rope, Rope::from_parts(vec![(4, 0), (3, 0)], &path[..]));
 
         rope.mv(&Up(4));
         path.push((4, 1));
         path.push((4, 2));
         path.push((4, 3));
-        assert_eq!(rope, Rope::from_parts((4, 4), (4, 3), &path[..]));
+        assert_eq!(rope, Rope::from_parts(vec![(4, 4), (4, 3)], &path[..]));
 
         rope.mv(&Left(3));
         path.push((3, 4));
         path.push((2, 4));
-        assert_eq!(rope, Rope::from_parts((1, 4), (2, 4), &path[..]));
+        assert_eq!(rope, Rope::from_parts(vec![(1, 4), (2, 4)], &path[..]));
 
         rope.mv(&Down(1));
-        assert_eq!(rope, Rope::from_parts((1, 3), (2, 4), &path[..]));
+        assert_eq!(rope, Rope::from_parts(vec![(1, 3), (2, 4)], &path[..]));
 
         rope.mv(&Right(4));
         path.push((3, 3));
         path.push((4, 3));
-        assert_eq!(rope, Rope::from_parts((5, 3), (4, 3), &path[..]));
+        assert_eq!(rope, Rope::from_parts(vec![(5, 3), (4, 3)], &path[..]));
 
         rope.mv(&Down(1));
-        assert_eq!(rope, Rope::from_parts((5, 2), (4, 3), &path[..]));
+        assert_eq!(rope, Rope::from_parts(vec![(5, 2), (4, 3)], &path[..]));
 
         rope.mv(&Left(5));
         path.push((3, 2));
         path.push((2, 2));
         path.push((1, 2));
-        assert_eq!(rope, Rope::from_parts((0, 2), (1, 2), &path[..]));
+        assert_eq!(rope, Rope::from_parts(vec![(0, 2), (1, 2)], &path[..]));
 
         rope.mv(&Right(2));
-        assert_eq!(rope, Rope::from_parts((2, 2), (1, 2), &path[..]));
+        assert_eq!(rope, Rope::from_parts(vec![(2, 2), (1, 2)], &path[..]));
     }
     #[test]
     fn example_part1() {
@@ -265,7 +258,7 @@ U 20";
             (4, 1),
             (0, 0), (1, 0), (2, 0), (3, 0),
         ];
-        assert_eq!(rope, Rope::from_parts((2, 2), (1, 2), &path[..]));
+        assert_eq!(rope, Rope::from_parts(vec![(2, 2), (1, 2)], &path[..]));
         assert_eq!(rope.path_len(), 13);
     }
     #[test]
