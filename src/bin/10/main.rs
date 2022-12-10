@@ -6,7 +6,7 @@ use std::{
 };
 use simple_error::SimpleError;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 enum Instruction {
     AddX(i32),
     Noop,
@@ -35,7 +35,7 @@ fn instruction_stream(s: &str) -> Vec<Instruction> {
     }).collect()
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 struct CPU<I> {
     x: i32,
     cycles_left: u8,
@@ -84,11 +84,30 @@ fn part1<I>(data: I) -> i32 where I: IntoIterator<Item=Instruction> {
         }
     })
 }
+fn part2<I>(data: I) -> String where I: IntoIterator<Item=Instruction> {
+    const LIT: char = if cfg!(test) { '#' } else { '█' };
+    const DARK: char = if cfg!(test) { '.' } else { ' ' };
+    let cpu = CPU::new(data.into_iter());
+    cpu.enumerate().fold(String::new(), |mut crt, (step, signal)| {
+        if 0 < step && step % 40 == 0 {
+            crt.push('\n');
+        }
+        let step = step % 40;
+        if (signal - step as i32).abs() <= 1 {
+            crt.push(LIT);
+        } else {
+            crt.push(DARK);
+        }
+        crt
+    })
+}
 
 fn main() {
     let input = include_str!("input.txt");
     let data = instruction_stream(input);
-    println!("Part 1: {}", part1(data.into_iter()));
+    println!("Part 1: {}", part1(data.clone().into_iter()));
+    println!("Part 2:");
+    println!("{}", part2(data.into_iter()));
 }
 
 #[cfg(test)]
@@ -100,6 +119,12 @@ mod tests_day_10 {
 
     const SMALL_INPUT: &str = "noop\naddx 3\naddx -5";
     const INPUT: &str = include_str!("example.txt");
+    const OUTPUT: &str = "##..##..##..##..##..##..##..##..##..##..
+###...###...###...###...###...###...###.
+####....####....####....####....####....
+#####.....#####.....#####.....#####.....
+######......######......######......####
+#######.......#######.......#######.....";
 
     fn small_data() -> Vec<Instruction> {
         vec![Noop, AddX(3), AddX(-5)]
@@ -141,5 +166,10 @@ mod tests_day_10 {
     fn run_example_program() {
         let instr = instruction_stream(INPUT).into_iter();
         assert_eq!(part1(instr), 13140);
+    }
+    #[test]
+    fn run_example_program2() {
+        let instr = instruction_stream(INPUT).into_iter();
+        assert_eq!(part2(instr), OUTPUT);
     }
 }
