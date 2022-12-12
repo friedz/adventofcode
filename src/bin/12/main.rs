@@ -1,6 +1,9 @@
 
 use std::{
-    cmp::Ordering,
+    cmp::{
+        self,
+        Ordering,
+    },
     collections::BinaryHeap,
     str::FromStr,
 };
@@ -57,6 +60,9 @@ struct HeightMap {
 impl HeightMap {
     fn get(&self, (x, y): (usize, usize)) -> Option<&i32> {
         self.map.get(y)?.get(x)
+    }
+    fn new_start(&mut self, pos: (usize, usize)) {
+        self.start = pos;
     }
     fn posible_steps(&self, nvs: &NaviState) -> Vec<NaviState> {
         let level = match self.get((nvs.x(), nvs.y())) {
@@ -166,12 +172,34 @@ impl FromStr for HeightMap {
     }
 }
 
+fn part2(map: &mut HeightMap) -> Option<u32> {
+    (0..map.height()).fold(None, |min, x| (0..map.width()).fold(min, |min, y|  {
+        match map.get((x, y)) {
+            Some(0) => {
+                map.new_start((x, y));
+                match (min, map.shortest_path()) {
+                    (Some(a), Some(b)) => {
+                        Some(cmp::min(a, b))
+                    },
+                    (None, Some(b)) => Some(b),
+                    (a, None) => a,
+                }
+            },
+            _ => min,
+        }
+    }))
+}
+
 fn main() {
     let input = include_str!("input.txt");
-    let map: HeightMap = input.parse().unwrap();
+    let mut map: HeightMap = input.parse().unwrap();
     match map.shortest_path() {
         Some(path) => println!("Part 1: {}", path),
         None => println!("Part 1 dosn't have a solution!"),
+    }
+    match part2(&mut map) {
+        Some(path) => println!("Part 2: {}", path),
+        None => println!("Part 2 dosn't have a solution!"),
     }
 }
 
@@ -194,6 +222,11 @@ mod tests_day_12 {
         }
     }
 
+    #[test]
+    fn example_part2() {
+        let mut hm = parsed_map();
+        assert_eq!(part2(&mut hm), Some(29));
+    }
     #[test]
     fn least_steps_up_the_hill() {
         let hm = parsed_map();
