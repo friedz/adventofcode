@@ -21,12 +21,11 @@ use nom::{
     IResult,
 };
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 enum Packet {
     Int(i32),
     List(Vec<Packet>),
 }
-#[cfg(test)]
 macro_rules! l {
     () => {
         Packet::List(vec![])
@@ -35,7 +34,6 @@ macro_rules! l {
         Packet::List(vec![$($val),*])
     }
 }
-#[cfg(test)]
 macro_rules! i {
     ($val:expr) => {
         Packet::Int($val)
@@ -95,10 +93,30 @@ fn part1(packets: &Vec<(Packet, Packet)>) -> usize {
     })
 }
 
+fn part2(packets: Vec<(Packet, Packet)>) -> usize {
+    let decode_1: Packet = l![l![i!(2)]];
+    let decode_2: Packet = l![l![i!(6)]];
+    let mut packets = packets.into_iter().fold(vec![decode_1.clone(), decode_2.clone()],
+    |mut vec, (pack_a, pack_b)| {
+        vec.push(pack_a);
+        vec.push(pack_b);
+        vec
+    });
+    packets.sort();
+    packets.iter().enumerate().fold(1, |key, (idx, pack)| {
+        if pack == &decode_1 || pack == &decode_2 {
+            key * (idx + 1)
+        } else {
+            key
+        }
+    })
+}
+
 fn main() {
     let input = include_str!("input.txt");
     let (_, packet_list) = parse_packet_pair_list(input).unwrap();
     println!("Part 1: {}", part1(&packet_list));
+    println!("Part 2: {}", part2(packet_list));
 }
 
 #[cfg(test)]
@@ -134,6 +152,20 @@ mod tests_day_13 {
         )]
     }
 
+    #[test]
+    fn full_example_part2() {
+        let (_, data) = parse_packet_pair_list(INPUT).unwrap();
+        assert_eq!(part2(data), 140);
+    }
+    #[test]
+    fn example_part2() {
+        assert_eq!(part2(parsed_input()), 140);
+    }
+    #[test]
+    fn full_example_part1() {
+        let (_, data) = parse_packet_pair_list(INPUT).unwrap();
+        assert_eq!(part1(&data), 13);
+    }
     #[test]
     fn example_part1() {
         assert_eq!(part1(&parsed_input()), 13);
