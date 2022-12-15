@@ -12,35 +12,35 @@ use nom::{
 
 #[derive(Debug, Eq, PartialEq)]
 struct Sensor {
-    position: (i32, i32),
-    closest_beacon: (i32, i32),
+    position: (i64, i64),
+    closest_beacon: (i64, i64),
 }
 impl Sensor {
-    fn new(pos: (i32, i32), beacon: (i32, i32)) -> Sensor {
+    fn new(pos: (i64, i64), beacon: (i64, i64)) -> Sensor {
         Sensor {
             position: pos,
             closest_beacon: beacon,
         }
     }
-    fn position(&self) -> (i32, i32) {
+    fn position(&self) -> (i64, i64) {
         self.position
     }
-    fn beacon(&self) -> (i32, i32) {
+    fn beacon(&self) -> (i64, i64) {
         self.closest_beacon
     }
-    fn distance(&self, point: (i32, i32)) -> i32 {
+    fn distance(&self, point: (i64, i64)) -> i64 {
         (self.position.0 - point.0).abs()
         + (self.position.1 - point.1).abs()
     }
-    fn beacon_distance(&self) -> i32 {
+    fn beacon_distance(&self) -> i64 {
         self.distance(self.closest_beacon)
     }
-    fn could_be_beacon(&self, pos: (i32, i32)) -> bool {
+    fn could_be_beacon(&self, pos: (i64, i64)) -> bool {
         self.distance(pos) > self.beacon_distance()
     }
 }
-fn sensor_coverage(sensors: &Vec<Sensor>) -> ((i32, i32), (i32, i32)) {
-    sensors.iter().fold(((i32::MAX, i32::MAX), (i32::MIN, i32::MIN)), |((xmin,ymin),(xmax,ymax)), sensor| {
+fn sensor_coverage(sensors: &Vec<Sensor>) -> ((i64, i64), (i64, i64)) {
+    sensors.iter().fold(((i64::MAX, i64::MAX), (i64::MIN, i64::MIN)), |((xmin,ymin),(xmax,ymax)), sensor| {
         (
             (
                 min(xmin, sensor.position().0 - sensor.beacon_distance()),
@@ -52,7 +52,7 @@ fn sensor_coverage(sensors: &Vec<Sensor>) -> ((i32, i32), (i32, i32)) {
         )
     })
 }
-fn count_distress_beacon_free_pos_in_line(sensors: &Vec<Sensor>, line: i32) -> u32 {
+fn count_distress_beacon_free_pos_in_line(sensors: &Vec<Sensor>, line: i64) -> u32 {
     let ((xmin, _), (xmax, _)) = sensor_coverage(sensors);
     (xmin..=xmax).fold(0, |count, x| {
         let mut plus = false;
@@ -70,16 +70,29 @@ fn count_distress_beacon_free_pos_in_line(sensors: &Vec<Sensor>, line: i32) -> u
         }
     })
 }
+fn find_distress_beacon(sensors: &Vec<Sensor>, (xmax, ymax): (i64, i64)) -> Option<(i64, i64)> {
+    for x in 0..xmax {
+        'coord: for y in 0..ymax {
+            for s in sensors {
+                if !s.could_be_beacon((x, y)) {
+                    continue 'coord;
+                }
+            }
+            return Some((x, y));
+        }
+    }
+    None
+}
 
 fn parse_sensor(s: &str) -> IResult<&str, Sensor> {
     let (s, _) = tag("Sensor at x=")(s)?;
-    let (s, sens_x) = complete::i32(s)?;
+    let (s, sens_x) = complete::i64(s)?;
     let (s, _) = tag(", y=")(s)?;
-    let (s, sens_y) = complete::i32(s)?;
+    let (s, sens_y) = complete::i64(s)?;
     let (s, _) = tag(": closest beacon is at x=")(s)?;
-    let (s, beac_x) = complete::i32(s)?;
+    let (s, beac_x) = complete::i64(s)?;
     let (s, _) = tag(", y=")(s)?;
-    let (s, beac_y) = complete::i32(s)?;
+    let (s, beac_y) = complete::i64(s)?;
     Ok((s, Sensor::new((sens_x, sens_y), (beac_x, beac_y))))
 }
 fn parse_input(s: &str) -> IResult<&str, Vec<Sensor>> {
@@ -91,6 +104,8 @@ fn main() {
     let (_, data) = parse_input(input).unwrap();
     let part1 = count_distress_beacon_free_pos_in_line(&data, 2_000_000);
     println!("Part 1: {}", part1);
+    let (x, y) = find_distress_beacon(&data, (4_000_000, 4_000_000)).unwrap();
+    println!("Part 2: {}", x * 4_000_000 + y);
 }
 
 #[cfg(test)]
@@ -117,6 +132,21 @@ mod tests_day_15 {
         ]
     }
 
+    #[test]
+    fn full_example_part2() {
+        let (_, data) = parse_input(INPUT).unwrap();
+        let res = find_distress_beacon(&data, (20, 20));
+        assert_eq!(res, Some((14, 11)));
+        let (x, y) = res.unwrap();
+        assert_eq!(x * 4_000_000 + y, 56_000_011);
+    }
+    #[test]
+    fn example_part2() {
+        let res = find_distress_beacon(&example_data(), (20, 20));
+        assert_eq!(res, Some((14, 11)));
+        let (x, y) = res.unwrap();
+        assert_eq!(x * 4_000_000 + y, 56_000_011);
+    }
     #[test]
     fn full_example_part1() {
         let (_, data) = parse_input(INPUT).unwrap();
