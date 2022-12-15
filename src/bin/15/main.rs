@@ -35,6 +35,16 @@ impl Sensor {
     fn beacon_distance(&self) -> i64 {
         self.distance(self.closest_beacon)
     }
+    /// gets the first position to the riht in the same line
+    /// wich is farther away from the sensor than its closest beacon
+    fn next_posible_beacon_in_line(&self, (x, y): (i64, i64)) -> (i64, i64) {
+        if self.could_be_beacon((x, y)) {
+            (x, y)
+        } else {
+            let y_to_sensor = (self.position().1 - y).abs();
+            (self.position().0 + self.beacon_distance() - y_to_sensor + 1, y)
+        }
+    }
     fn could_be_beacon(&self, pos: (i64, i64)) -> bool {
         self.distance(pos) > self.beacon_distance()
     }
@@ -71,15 +81,18 @@ fn count_distress_beacon_free_pos_in_line(sensors: &Vec<Sensor>, line: i64) -> u
     })
 }
 fn find_distress_beacon(sensors: &Vec<Sensor>, (xmax, ymax): (i64, i64)) -> Option<(i64, i64)> {
-    for x in 0..xmax {
-        'coord: for y in 0..ymax {
-            for s in sensors {
-                if !s.could_be_beacon((x, y)) {
-                    continue 'coord;
+    let (mut x, mut y) = (0, 0);
+    'coords: while y <= ymax {
+        for s in sensors {
+            if !s.could_be_beacon((x, y)) {
+                (x, y) = s.next_posible_beacon_in_line((x, y));
+                if x > xmax {
+                    (x, y) = (0, y + 1);
                 }
+                continue 'coords;
             }
-            return Some((x, y));
         }
+        return Some((x, y))
     }
     None
 }
@@ -161,7 +174,12 @@ mod tests_day_15 {
         );
     }
     #[test]
-    fn could_be_beacon_for_sensor() {
+    fn test_next_posible_beacon_in_line() {
+            let sense = Sensor::new((0, 0), (4, 4));
+            assert_eq!(sense.next_posible_beacon_in_line((-4, 4)), (5, 4));
+    }
+    #[test]
+    fn test_could_be_beacon() {
         assert!(!Sensor::new((13,  2), (15,  3)).could_be_beacon((15, 3)));
         assert!(Sensor::new((13,  2), (15,  3)).could_be_beacon((2, 10)));
         assert!(Sensor::new((13,  2), (15,  3)).could_be_beacon((-2, 15)));
@@ -174,12 +192,12 @@ mod tests_day_15 {
         );
     }
     #[test]
-    fn read_all_sensors() {
+    fn test_parse_input() {
         let (_, data) = parse_input(INPUT).unwrap();
         assert_eq!(data, example_data());
     }
     #[test]
-    fn read_sensor() {
+    fn test_parse_sensor() {
         assert_eq!(
             parse_sensor("Sensor at x=2, y=0: closest beacon is at x=2, y=10"),
             Ok(("", Sensor::new((2, 0), (2, 10))))
@@ -194,7 +212,7 @@ mod tests_day_15 {
         );
     }
     #[test]
-    fn distances() {
+    fn test_beacon_distances() {
         assert_eq!(Sensor::new((0,0),(2,0)).beacon_distance(), 2);
         assert_eq!(Sensor::new((0,0),(-2,0)).beacon_distance(), 2);
         assert_eq!(Sensor::new((0,0),(0,2)).beacon_distance(), 2);
