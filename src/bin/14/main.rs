@@ -18,13 +18,13 @@ use self::Material::{
     Rock,
 };
 
-fn parse_rock_path(s: &str) -> IResult<&str, Vec<(u64, u64)>> {
+fn parse_rock_path(s: &str) -> IResult<&str, Vec<(i64, i64)>> {
     separated_list0(
         tag(" -> "),
-        separated_pair(complete::u64, tag(","), complete::u64)
+        separated_pair(complete::i64, tag(","), complete::i64)
     )(s)
 }
-fn parse_all_rocks(s: &str) -> IResult<&str, Vec<Vec<(u64, u64)>>> {
+fn parse_all_rocks(s: &str) -> IResult<&str, Vec<Vec<(i64, i64)>>> {
     separated_list0(complete::newline, parse_rock_path)(s)
 }
 
@@ -35,13 +35,17 @@ enum Material {
 }
 #[derive(Debug, Eq, PartialEq)]
 struct CaveMap {
-    sand_source: (u64, u64),
-    min_pos: (u64, u64),
-    max_pos: (u64, u64),
-    map: HashMap<(u64, u64), Material>,
+    sand_source: (i64, i64),
+    min_pos: (i64, i64),
+    max_pos: (i64, i64),
+    map: HashMap<(i64, i64), Material>,
 }
 impl CaveMap {
-    fn drop_sand(&mut self) -> Option<(u64, u64)> {
+    fn drop_sand(&mut self, floor: bool) -> Option<(i64, i64)> {
+        match self.map.get(&self.sand_source) {
+            Some(_) => { return None; },
+            None => { },
+        }
         let (mut next_x, mut next_y) = self.sand_source;
         while next_y <= self.max_pos.1 {
             if None == self.map.get(&(next_x, next_y + 1)) {
@@ -57,20 +61,25 @@ impl CaveMap {
                 return Some((next_x, next_y));
             }
         }
-        None
+        if floor {
+            self.map.insert((next_x, next_y), Sand);
+            Some((next_x, next_y))
+        } else {
+            None
+        }
     }
-    fn fill_with_sand(&mut self) -> u64 {
+    fn fill_with_sand(&mut self, floor: bool) -> i64 {
         let mut count = 0;
-        while let Some(_) = self.drop_sand() {
+        while let Some(_) = self.drop_sand(floor) {
             count += 1;
         }
         count
     }
 }
-impl From<Vec<Vec<(u64, u64)>>> for CaveMap {
-    fn from(cave_paths: Vec<Vec<(u64, u64)>>) -> CaveMap {
+impl From<Vec<Vec<(i64, i64)>>> for CaveMap {
+    fn from(cave_paths: Vec<Vec<(i64, i64)>>) -> CaveMap {
         let (map, min_x, max_pos) = cave_paths.into_iter().fold(
-            (HashMap::new(), u64::MAX, (u64::MIN, u64::MIN)),
+            (HashMap::new(), i64::MAX, (i64::MIN, i64::MIN)),
             |(map, min_x, max_pos), path| {
                 path.windows(2).fold((map, min_x, max_pos),
                 |(map, minx, (maxx, maxy)), ends_of_edge| {
@@ -106,16 +115,14 @@ fn main() {
     let input = include_str!("input.txt");
     let (_, rock_paths) = parse_all_rocks(input).unwrap();
     let mut cave = CaveMap::from(rock_paths);
-    println!("Part 1: {}", cave.fill_with_sand());
+    let part1 = cave.fill_with_sand(false);
+    println!("Part 1: {}", part1);
+    println!("Part 2: {}", cave.fill_with_sand(true) + part1);
 }
 
 #[cfg(test)]
 mod tests_day_14 {
-    use super::{
-        *,
-        //Material::*,
-        Material::Rock,
-    };
+    use super::*;
 
     macro_rules! rock_path {
         ($($x:literal,$y:literal)->+) => {
@@ -124,7 +131,7 @@ mod tests_day_14 {
     }
 
     const INPUT: &str = "498,4 -> 498,6 -> 496,6\n503,4 -> 502,4 -> 502,9 -> 494,9";
-    fn parsed_example() -> Vec<Vec<(u64, u64)>> {
+    fn parsed_example() -> Vec<Vec<(i64, i64)>> {
         vec![
             rock_path![498,4 -> 498,6 -> 496,6],
             rock_path![503,4 -> 502,4 -> 502,9 -> 494,9]
@@ -145,15 +152,26 @@ mod tests_day_14 {
     }
 
     #[test]
+    fn example_part2() {
+        assert_eq!(example_cave_map().fill_with_sand(true), 93);
+    }
+    #[test]
+    fn example_part2_after_part1() {
+        let mut cave = example_cave_map();
+        let part1 = cave.fill_with_sand(false);
+        assert_eq!(part1, 24);
+        assert_eq!(cave.fill_with_sand(true) + part1, 93);
+    }
+    #[test]
     fn example_part1() {
-        assert_eq!(example_cave_map().fill_with_sand(), 24);
+        assert_eq!(example_cave_map().fill_with_sand(false), 24);
     }
     #[test]
     fn drop_one_grain_of_sand() {
         let mut cave = example_cave_map();
         cave.map.insert((500,8), Sand);
         let mut new_map = example_cave_map();
-        assert_eq!(new_map.drop_sand(), Some((500, 8)));
+        assert_eq!(new_map.drop_sand(false), Some((500, 8)));
         assert_eq!(new_map, cave);
     }
     #[test]
