@@ -4,7 +4,8 @@ use std::{
         max,
         min,
     },
-    collections::HashSet
+    collections::HashSet,
+    time::SystemTime,
 };
 use nom::{
     bytes::complete::tag,
@@ -101,8 +102,18 @@ impl Droplet {
 fn main() {
     let input = include_str!("input.txt");
     let (_, droplet) = parse_droplet(input).unwrap();
-    println!("Part 1: {}", droplet.surface());
-    println!("Part 2: {}", droplet.exterior_surface());
+
+    let now = SystemTime::now();
+    let part1 = droplet.surface();
+    let elapsed = now.elapsed().unwrap();
+    println!("Part 1: {}", part1);
+    println!("  took: {:?}", elapsed);
+
+    let now = SystemTime::now();
+    let part2 = droplet.exterior_surface();
+    let elapsed = now.elapsed().unwrap();
+    println!("Part 2: {}", part2);
+    println!("  took: {:?}", elapsed);
 }
 
 #[cfg(test)]
