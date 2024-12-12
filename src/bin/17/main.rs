@@ -162,7 +162,7 @@ impl Chamber {
 }
 
 fn main() {
-    let input = include_str!("input17.txt");
+    let input = include_str!("input.txt");
     let (_, winds) = parse_winds(input).unwrap();
     let mut c = Chamber::new(winds);
     println!("Part 1: {}", c.drop_n_rocks(2022));

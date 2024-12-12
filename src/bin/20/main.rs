@@ -61,7 +61,7 @@ fn part1(data: Vec<i32>) -> i32 {
 }
 
 fn main() {
-    let input = include_str!("input20.txt");
+    let input = include_str!("input.txt");
     let (_, data) = parse_input(input).unwrap();
     let part1 = part1(data);
     println!("Part 1: {}", part1);
